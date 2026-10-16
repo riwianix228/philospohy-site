@@ -20,7 +20,7 @@
        → звук → карта → мир философа → адаптив → reduced-motion
     4. JS: конфиг → утилиты → canvas-мир (частицы/узлы/камера)
        → прелоадер → типографика → звук → курсор → GSAP-сцены
-       → карта → мир философа (портрет-созвездие, ScrollTrigger)
+       → карта → мир философа (портреты line-art, ScrollTrigger)
   Части 3–4 (тест, финал) подключаются в точках расширения —
   ищите комментарий "ТОЧКИ РАСШИРЕНИЯ".
 ============================================================ -->
@@ -128,6 +128,11 @@ html.cursor-on #cursor-dot, html.cursor-on #cursor-ring{ opacity:1 }
 #flash{
   position:fixed; inset:0; z-index:30; pointer-events:none; opacity:0;
   transition:opacity .2s linear;
+}
+/* 3D-сетка «горизонт» — отдельный холст, рисуется только во время влёта
+   в узел (startGrid3d/stopGrid3d); когда неактивна — холст прозрачный */
+#grid3d{
+  position:fixed; inset:0; z-index:25; pointer-events:none;
 }
 
 /* ==========================================================
@@ -321,10 +326,10 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   display:flex; flex-direction:column; align-items:center; text-align:center;
 }
 .ws-kicker{ color:var(--wc); margin-bottom:26px }
-/* --- портрет-созвездие (генеративный SVG из JS) --- */
-.ws-portrait{ width:clamp(148px, 20vh, 204px); margin-bottom:12px; filter:drop-shadow(0 0 26px var(--wc-line)) }
+/* --- портрет line-art (рисуется в JS из PORTRAIT_ART) --- */
+.ws-portrait{ width:clamp(168px, 23vh, 228px); margin-bottom:12px; filter:drop-shadow(0 0 26px var(--wc-line)) }
 .ws-portrait svg{ display:block; width:100%; height:auto; overflow:visible }
-.ws-orbit{ transform-box:view-box; transform-origin:75px 95px; animation:orbitSpin 18s linear infinite }
+.ws-orbit{ transform-box:view-box; transform-origin:75px 88px; animation:orbitSpin 18s linear infinite }
 @keyframes orbitSpin{ to{ transform:rotate(360deg) } }
 .ws-epithet{
   font:400 11px/1 var(--sans); letter-spacing:.34em; text-indent:.34em;
@@ -353,9 +358,8 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   font:300 clamp(14.5px, 1.65vw, 17px)/1.85 var(--sans);
   color:rgba(237,237,242,.8);
 }
-/* цитата */
+/* цитата (кавычки «…» уже внутри текста — декоративная марка не нужна) */
 .ws-quote-sec{ text-align:center }
-.ws-quote-mark{ display:block; font:500 64px/0.35 var(--serif); color:var(--wc); opacity:.4 }
 .w-quote{
   font:italic 500 clamp(21px, 2.9vw, 33px)/1.4 var(--serif);
   color:var(--wc); text-shadow:0 0 44px var(--wc-line);
@@ -387,10 +391,6 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   font:300 11px/1.9 var(--sans); letter-spacing:.18em; text-indent:.18em;
   text-transform:uppercase; color:rgba(237,237,242,.35); max-width:430px;
 }
-#world-back{
-  position:absolute; top:calc(18px + var(--safe-t)); left:20px; z-index:7;
-  background:rgba(10,10,15,.6); backdrop-filter:blur(8px);
-}
 
 /* Статичное раскрытие контента (reduced motion или нет GSAP) */
 .reveal-static .overtitle,
@@ -409,7 +409,7 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   .overtitle{ letter-spacing:.3em; text-indent:.3em; gap:12px }
   .overtitle .line{ width:34px }
   #enter-btn{ padding:19px 32px }
-  #map-back, #world-back{ top:calc(14px + var(--safe-t)); left:14px }
+  #map-back{ top:calc(14px + var(--safe-t)); left:14px }
 }
 @media (max-width:640px){
   /* узлы и подписи крупнее в «сжатом» viewBox карты */
@@ -429,8 +429,6 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   .map-head{ padding-top:56px }
   .ws-inner{ padding-left:18px; padding-right:18px }
   .ws-label{ letter-spacing:.16em; text-indent:.16em }
-  .ws-quote-mark{ font-size:46px }
-  #world-back{ padding:11px 16px; font-size:9.5px }
 }
 
 /* ==========================================================
@@ -514,12 +512,12 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   <!--
     ЭКРАН 2 · МИР ФИЛОСОФА (шаблон ×6) — ЧАСТЬ 2
     Шаблон один — данные подставляет mountWorld(p, idx) из PHILOSOPHERS:
-    портрет-созвездие (генеративный SVG), имя, идея, цитата,
-    блок «А что бы он сказал про алгоритмы?», кнопки возврата.
+    портрет (SVG line-art), имя, идея, цитата, блок «А что бы он сказал
+    про алгоритмы?». Кнопка возврата — только в футере (работает и
+    Escape); верхний левый угол мира оставлен чистым.
   -->
   <section id="world-screen" hidden aria-label="Мир философа">
     <div id="world-progress" aria-hidden="true"></div>
-    <button id="world-back" class="ghost-btn" data-hover>← К карте</button>
     <div id="world-scroll">
       <div class="ws-inner">
         <div class="kicker ws-kicker">Мир философа · <span id="w-idx">01 / 06</span></div>
@@ -534,7 +532,6 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
         </section>
 
         <section class="ws-sec ws-quote-sec ws-reveal" aria-label="Цитата">
-          <span class="ws-quote-mark" aria-hidden="true">«</span>
           <blockquote class="w-quote" id="w-quote"></blockquote>
           <div class="ws-quote-src" id="w-quote-src"></div>
         </section>
@@ -549,7 +546,7 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 
         <footer class="ws-foot ws-reveal">
           <button id="world-back2" class="ghost-btn" data-hover>← К карте</button>
-          <p class="ws-scan">Сквозной вопрос карты:<br>кто принимает твои решения — ты или алгоритм?</p>
+          <p class="ws-scan">кто принимает твои решения — ты или алгоритм?</p>
         </footer>
       </div>
     </div>
@@ -558,6 +555,9 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 
 <!-- Вспышка zoom-перехода -->
 <div id="flash" aria-hidden="true"></div>
+
+<!-- 3D-сетка «горизонт» (рисуется только во время влёта в узел) -->
+<canvas id="grid3d" aria-hidden="true"></canvas>
 
 <!-- Кастомный курсор -->
 <div id="cursor-dot" aria-hidden="true"></div>
@@ -748,6 +748,14 @@ function initStars(){
   }
 }
 
+/* --- 3D-сетка «горизонт» — отдельный холст поверх сцены ---
+   Включается только на время влёта в узел (startGrid3d):
+   перспектива снизу, бегущие линии и свечение горизонта
+   в цвете философа — «влёт» вместо простого приближения. */
+const gridCanvas = document.getElementById('grid3d');
+const gctx       = gridCanvas.getContext('2d');
+const grid3d     = { active: false, alpha: 0, off: 0, speed: .5, color: '#9B7EDE' };
+
 /* --- Размеры --- */
 function resize(){
   DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -756,6 +764,9 @@ function resize(){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   nodes.forEach(n => { n.px = n.x * W; n.py = n.y * H; });
   if (cam.z === 1){ cam.x = W / 2; cam.y = H / 2; }
+  // холст сетки — те же размеры и плотность пикселей
+  gridCanvas.width = Math.round(W * DPR); gridCanvas.height = Math.round(H * DPR);
+  gctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 
 /* --- Шаг физики частиц --- */
@@ -802,6 +813,71 @@ function draw(){
   drawNodes();
 
   ctx.restore();
+}
+
+/* --- 3D-сетка «горизонт» (синтвейв-влёт вместо простого приближения) --- */
+function startGrid3d(color){
+  if (REDUCED || !HAS_GSAP) return;            // в статичном режиме сетка не нужна
+  grid3d.color = color;
+  grid3d.active = true;
+  grid3d.off = 0;
+  gsap.killTweensOf(grid3d);
+  gsap.to(grid3d, { alpha: 1, duration: .45, ease: 'power2.out' });
+  // линии разгоняются по мере влёта камеры в узел
+  gsap.fromTo(grid3d, { speed: .45 }, { speed: 3.6, duration: 1.9, ease: 'power2.in' });
+}
+function stopGrid3d(){
+  if (!grid3d.active) return;
+  gsap.killTweensOf(grid3d);
+  gsap.to(grid3d, {
+    alpha: 0, duration: .4, ease: 'power1.out',
+    onComplete: () => { grid3d.active = false; gctx.clearRect(0, 0, W, H); }
+  });
+}
+function drawGrid3d(dt){
+  if (!grid3d.active || grid3d.alpha <= 0.005) return;
+  gctx.clearRect(0, 0, W, H);
+  gctx.save();
+  gctx.globalAlpha = grid3d.alpha;
+  const hy = H * 0.46;                          // линия горизонта
+  // тёплое свечение неба у горизонта
+  const halo = gctx.createLinearGradient(0, hy - 70, 0, hy + 120);
+  halo.addColorStop(0, 'rgba(0,0,0,0)');
+  halo.addColorStop(.55, hexToRgba(grid3d.color, .16 * grid3d.alpha));
+  halo.addColorStop(1, 'rgba(0,0,0,0)');
+  gctx.fillStyle = halo;
+  gctx.fillRect(0, hy - 70, W, 190);
+  // сама линия горизонта — ярче к центру
+  const hl = gctx.createLinearGradient(0, 0, W, 0);
+  hl.addColorStop(0, hexToRgba(grid3d.color, 0));
+  hl.addColorStop(.5, hexToRgba(grid3d.color, .9 * grid3d.alpha));
+  hl.addColorStop(1, hexToRgba(grid3d.color, 0));
+  gctx.strokeStyle = hl; gctx.lineWidth = 1.4;
+  gctx.beginPath(); gctx.moveTo(0, hy); gctx.lineTo(W, hy); gctx.stroke();
+  // вертикальные «рельсы», сходящиеся к точке схода на горизонте
+  const NV = 13, spreadB = W * 0.17, spreadT = W * 0.012;
+  for (let i = -NV; i <= NV; i++){
+    const g2 = gctx.createLinearGradient(0, hy, 0, H);
+    g2.addColorStop(0, hexToRgba(grid3d.color, 0));
+    g2.addColorStop(1, hexToRgba(grid3d.color, .55 * grid3d.alpha));
+    gctx.strokeStyle = g2; gctx.lineWidth = 1;
+    gctx.beginPath();
+    gctx.moveTo(W / 2 + i * spreadT, hy);
+    gctx.lineTo(W / 2 + i * spreadB, H);
+    gctx.stroke();
+  }
+  // бегущие горизонтальные линии: к горизонту — плотнее (перспектива)
+  grid3d.off = (grid3d.off + dt * grid3d.speed) % 1;
+  const ROWS = 20;
+  for (let k = 0; k < ROWS; k++){
+    const p = (k + grid3d.off) / ROWS;
+    if (p <= 0.001) continue;
+    const y = hy + (H - hy) * Math.pow(p, 2.5);
+    gctx.strokeStyle = hexToRgba(grid3d.color, Math.pow(p, 1.7) * .6 * grid3d.alpha);
+    gctx.lineWidth = p > .6 ? 1.4 : 1;
+    gctx.beginPath(); gctx.moveTo(0, y); gctx.lineTo(W, y); gctx.stroke();
+  }
+  gctx.restore();
 }
 
 // линии-связи между шестью узлами
@@ -901,6 +977,7 @@ function loop(now){
   }
   updateCursor();
   draw();
+  drawGrid3d(dt);
 }
 
 // наведение на узлы (по координатам мыши)
@@ -1117,6 +1194,28 @@ function updateCursor(){
    7. GSAP-СЦЕНЫ
    ------------------------------------------------------------ */
 const flash = document.getElementById('flash');
+const introEl = document.getElementById('intro');
+
+/* Интро прячется ЦЕЛИКОМ (visibility) и без «хвостов» твинов:
+   иначе полупрозрачные экраны карты/мира показывают сквозь себя
+   «призрачные» кнопки интро (баг «ОТКРЫТЬ КАРТУ» при выходе из мира) */
+const INTRO_ELS = ['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'];
+function hideIntroNow(){
+  if (HAS_GSAP && !REDUCED){
+    gsap.killTweensOf(INTRO_ELS);
+    gsap.set(INTRO_ELS, { opacity: 0, y: 0 });
+  }
+  introEl.style.visibility = 'hidden';
+}
+function revealIntro(){
+  introEl.style.visibility = 'visible';
+  if (HAS_GSAP && !REDUCED){
+    gsap.killTweensOf(INTRO_ELS);
+    gsap.to(INTRO_ELS, { opacity: 1, y: 0, duration: .8, stagger: .06, ease: 'power2.out' });
+  } else {
+    introEl.style.opacity = 1;
+  }
+}
 
 // Интро: сборка частиц → узлы → надзаголовок → буквы → слоган → кнопка
 function startIntro(){
@@ -1152,7 +1251,7 @@ function startIntro(){
     .to('#mute-btn', { opacity: 1, duration: 1.0 }, 0.9);
 }
 
-// Вход с интро: zoom-влёт сквозь узел → появление карты (экран 1)
+// Вход с интро: влёт сквозь узел с 3D-сеткой «горизонт» → карта (экран 1)
 function enterTo(node){
   if (entering || !introActive) return;
   entering = true;
@@ -1166,19 +1265,19 @@ function enterTo(node){
 
   if (HAS_GSAP && !REDUCED){
     Sound.whoosh();
+    startGrid3d(node.color);                    // сетка-горизонт выкатывается навстречу
+    gsap.killTweensOf(INTRO_ELS);
     gsap.timeline()
-      .to(['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'], {
-        opacity: 0, y: -26, duration: 0.5, stagger: 0.05, ease: 'power2.in'
-      })
+      .to(INTRO_ELS, { opacity: 0, y: -26, duration: 0.5, stagger: 0.05, ease: 'power2.in' })
       .add(() => {
         // камера летит в узел
         gsap.to(cam, { z: 15, x: node.px, y: node.py, duration: 1.6, ease: 'power3.in' });
       })
       .to(flash, { opacity: 1, duration: 0.5, ease: 'power2.in' }, '-=0.15')
-      .add(() => showMap(true));
+      .add(() => { stopGrid3d(); showMap(true); });
   } else {
     // простой переход без анимаций
-    document.getElementById('intro').style.opacity = 0;
+    introEl.style.opacity = 0;
     flash.style.transition = 'opacity .45s linear';
     flash.style.opacity = 1;
     setTimeout(() => showMap(true), 480);
@@ -1335,6 +1434,7 @@ function setAmbient(edge, node, z, dur){
 /* --- Показ карты (first = с отрисовкой рёбер) --- */
 function showMap(first){
   killWorldST();                                   // триггеры мира больше не нужны
+  hideIntroNow();                                  // интро скрыто целиком (защита от «призрака» кнопок)
   worldScreen.hidden = true; worldScreen.style.opacity = '';
   mapScreen.hidden = false;
   introActive = false;
@@ -1372,6 +1472,7 @@ function flyToWorld(p, g){
     `radial-gradient(circle at 50% 50%, #ffffff 0%, ${p.color} 46%, ${hexToRgba(p.color, .92)} 100%)`;
   if (HAS_GSAP && !REDUCED){
     Sound.whoosh();
+    startGrid3d(p.color);                        // 3D-сетка «горизонт» в цвете философа
     // зумим сам SVG в точку узла (origin — экранный центр кольца)
     const ringR = g.querySelector('.node-ring').getBoundingClientRect();
     const svgR  = mapSvg.getBoundingClientRect();
@@ -1382,7 +1483,7 @@ function flyToWorld(p, g){
         { opacity: 0, y: -16, duration: .4, stagger: .04, ease: 'power2.in' })
       .to(mapSvg, { scale: 9, transformOrigin: `${ox}px ${oy}px`, duration: 1.5, ease: 'power3.in' }, .1)
       .to(flash, { opacity: 1, duration: .5, ease: 'power2.in' }, 1.15)
-      .add(() => showWorld(p, +g.dataset.i));
+      .add(() => { stopGrid3d(); showWorld(p, +g.dataset.i); });
   } else {
     flash.style.transition = 'opacity .45s linear';
     flash.style.opacity = 1;
@@ -1393,11 +1494,11 @@ function flyToWorld(p, g){
 /* ============================================================
    9. ЭКРАН 2 · МИР ФИЛОСОФА (шаблон ×6) — ЧАСТЬ 2
    Контент миров лежит в PHILOSOPHERS (ideaFull / algo / question…).
-   Портрет — генеративный SVG: «созвездие-профиль» в цвете философа
-   + личный знак (вопрос Сократа, оси Декарта, звезда Канта,
-   молния Ницше, лавр Марка Аврелия, глаз Сартра).
-   Секции мира проявляются по скроллу (ScrollTrigger слушает
-   внутренний контейнер #world-scroll).
+   Портрет — рисованный SVG line-art в цвете философа (без картинок):
+   узнаваемые черты — борода Сократа, длинные волосы Декарта,
+   лысина Канта, усы Ницше, лавровый венок Марка Аврелия,
+   круглые очки Сартра. Секции мира проявляются по скроллу
+   (ScrollTrigger слушает внутренний контейнер #world-scroll).
    ============================================================ */
 const worldScroller = document.getElementById('world-scroll');
 const worldProgress = document.getElementById('world-progress');
@@ -1426,104 +1527,119 @@ function seeded(seed){
   return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 }
 
-/* --- Геометрия «созвездия-профиля» (viewBox 150×180) --- */
-const BUST = {
-  cx: 75, cy: 95,
-  front: [[83,22],[63,30],[53,44],[51,52],[47,58],[39,68],[47,74],[46,81],[51,92],[63,104],[60,118],[41,144],[25,160]], // лицо
-  back:  [[83,22],[95,44],[99,76],[95,114],[113,158]],  // затылок/плечо
-  eye: [60,55], ear: [79,76], cheek: [63,88],
-  big:  [0, 5, 8, 18],       // крупные точки: макушка, нос, подбородок, глаз
+/* --- Портреты философов: рисованный line-art (viewBox 150×180) ---
+   outline — контур головы/волос/бороды/плеч (толще),
+   detail  — черты лица (тоньше), eyes — зрачки (точки).
+   Каждый портрет узнаваем: борода Сократа, волосы Декарта,
+   лысина Канта, усы Ницше, венок Марка Аврелия, очки Сартра. */
+const PORTRAIT_ART = {
+  // Сократ: лысый купол, высокий лоб, курносый нос, большая кудрявая борода
+  socrates: {
+    outline: 'M48 86 C48 35 102 35 102 86 M48 92 C40 106 42 128 54 140 C62 149 88 149 96 140 C108 128 110 106 102 92 M34 172 C48 158 60 152 75 152 C90 152 102 158 116 172',
+    detail: 'M60 62 Q75 57 90 62 M62 70 Q75 66 88 70 M54 80 Q61 76 68 80 M82 80 Q89 76 96 80 M75 84 L72 98 Q74 103 80 100 M48 88 C43 90 43 98 49 100 M102 88 C107 90 107 98 101 100 M58 106 Q64 100 71 105 Q75 102 79 105 Q86 100 92 106 M69 118 Q75 121 81 118 M55 112 Q61 106 67 112 M83 112 Q89 106 95 112 M60 128 Q66 122 72 128 M78 128 Q84 122 90 128 M68 142 Q75 147 82 142',
+    eyes: [[61,87],[89,87]],
+  },
+  // Декарт: длинные волнистые волосы до плеч, тонкие усы, эспаньолка
+  descartes: {
+    outline: 'M58 60 C58 50 92 50 92 60 C96 70 97 86 95 100 C93 114 86 122 75 122 C64 122 57 114 55 100 C53 86 54 70 58 60 M46 84 C38 60 52 38 75 38 C98 38 112 60 104 84 M46 84 C37 94 35 110 38 124 C40 134 36 142 30 148 C40 150 48 143 50 132 M104 84 C113 94 115 110 112 124 C110 134 114 142 120 148 C110 150 102 143 100 132 M32 172 C46 158 58 152 75 152 C92 152 104 158 118 172',
+    detail: 'M58 56 C64 49 86 49 92 56 M44 94 C40 106 40 118 43 128 M106 94 C110 106 110 118 107 128 M57 74 Q63 70 69 74 M81 74 Q87 70 93 74 M75 82 L72 96 Q74 100 79 98 M63 104 Q69 100 74 103 Q75 102 76 103 Q81 100 87 104 M87 104 Q91 107 93 111 M63 104 Q59 107 57 111 M70 114 Q75 123 80 114 Q75 118 70 114',
+    eyes: [[63,80],[87,80]],
+  },
+  // Кант: высокий лысеющий лоб, пышные виски, второй подбородок, мягкие черты
+  kant: {
+    outline: 'M52 84 C52 44 98 44 98 84 M52 84 C46 88 44 100 46 110 C47 116 50 120 54 122 M98 84 C104 88 106 100 104 110 C103 116 100 120 96 122 M54 120 C59 130 66 136 75 136 C84 136 91 130 96 120 M62 141 Q75 148 88 141 M34 172 C48 160 60 154 75 154 C90 154 102 160 116 172',
+    detail: 'M62 66 Q75 61 88 66 M57 80 Q63 77 69 80 M81 80 Q87 77 93 80 M75 84 L72 98 Q74 102 79 100 M68 117 Q75 121 82 117 M58 103 Q61 107 59 111 M92 103 Q89 107 91 111',
+    eyes: [[63,86],[87,86]],
+  },
+  // Ницше: зачёсанные назад редеющие волосы, тяжёлые брови, огромные «моржовые» усы
+  nietzsche: {
+    outline: 'M54 88 C50 60 62 42 75 42 C88 42 100 60 96 88 M54 88 C53 100 55 112 62 122 C67 127 83 127 88 122 C95 112 97 100 96 88 M52 102 C58 94 68 98 75 101 C82 98 92 94 98 102 C101 111 94 120 86 117 C80 115 77 112 75 108 C73 112 70 115 64 117 C56 120 49 111 52 102 M32 172 C46 158 58 152 75 152 C92 152 104 158 118 172',
+    detail: 'M58 62 Q66 50 75 49 Q86 51 92 63 M60 58 Q70 46 82 46 M70 49 Q84 47 91 57 M55 78 L68 76 M82 76 L95 78 M75 82 L72 96 Q74 100 79 98 M75 104 C71 111 65 115 58 113 M75 104 C79 111 85 115 92 113 M68 126 Q75 130 82 126',
+    eyes: [[62,85],[88,85]],
+  },
+  // Марк Аврелий: лавровый венок (генерируется ниже), кудри, густая борода
+  marcus: {
+    outline: 'M52 86 C50 100 52 114 60 124 C66 131 84 131 90 124 C98 114 100 100 98 86 M50 80 Q54 68 61 74 Q65 63 72 70 Q76 62 80 69 Q87 62 91 70 Q97 64 100 80 M54 98 C50 116 56 134 68 141 C72 144 78 144 82 141 C94 134 100 116 96 98 M30 172 C46 156 60 150 75 150 C90 150 104 156 120 172',
+    detail: 'M57 82 Q63 79 69 82 M81 82 Q87 79 93 82 M75 86 L72 100 Q74 104 79 102 M62 108 Q68 102 74 107 Q75 105 76 107 Q82 102 88 108 M88 108 Q92 111 94 115 M62 108 Q58 111 56 115 M70 120 Q75 123 80 120 M60 112 Q65 106 70 112 M80 112 Q85 106 90 112 M64 128 Q69 122 74 128 M76 128 Q81 122 86 128 M69 140 Q75 145 81 140',
+    eyes: [[63,88],[87,88]],
+  },
+  // Сартр: круглые толстые очки, высокие залысины, крупные губы
+  sartre: {
+    outline: 'M53 76 C53 49 97 49 97 76 M53 76 C49 80 49 90 53 96 M97 76 C101 80 101 90 97 96 M53 78 C51 94 53 110 60 121 C66 128 84 128 90 121 C97 110 99 94 97 78 M34 172 C48 158 60 152 75 152 C90 152 102 158 116 172',
+    detail: 'M74 85 Q75 82 76 85 M49.5 86 L45 83 M100.5 86 L105 83 M75 92 L72 104 Q74 108 79 106 M63 116 Q68 112 74 115 Q75 114 76 115 Q82 112 87 116 M66 118 Q75 125 84 118 M51 90 C47 92 47 98 51 100 M99 90 C103 92 103 98 99 100',
+    extra: '<circle cx="62" cy="88" r="12.5" stroke-width="1.7"/><circle cx="88" cy="88" r="12.5" stroke-width="1.7"/>',
+    eyes: [[62,88],[88,88]],
+  },
 };
 
-/* --- Личные знаки философов (рисуются за портретом, stroke из группы) --- */
-const PORTRAIT_GLYPHS = {
-  // Сократ — большой вопрос
-  socrates: c => `<text x="75" y="130" text-anchor="middle" font-family="Cormorant, Georgia, serif" font-style="italic" font-size="116" fill="${c}" stroke="none">?</text>`,
-  // Декарт — оси координат и кривая
-  descartes: c => `
-    <line x1="14" y1="95" x2="136" y2="95"/>
-    <line x1="75" y1="12" x2="75" y2="176"/>
-    <path d="M26 144 C 52 42 94 150 126 56" stroke-dasharray="3 6"/>
-    <circle cx="93" cy="97" r="3" fill="${c}" stroke="none"/>`,
-  // Кант — звезда («звёздное небо над головой…»)
-  kant: c => `
-    <path d="M75 33 L82 88 L137 95 L82 102 L75 157 L68 102 L13 95 L68 88 Z"/>
-    <circle cx="75" cy="95" r="30"/>`,
-  // Ницше — молния и «разбитый» круг
-  nietzsche: c => `
-    <path d="M92 14 L60 82 L82 86 L56 168 L102 78 L80 74 Z"/>
-    <circle cx="75" cy="92" r="60" stroke-dasharray="80 26"/>`,
-  // Марк Аврелий — лавровый венок (генерируется ветвями-листьями)
-  marcus: c => laurelSVG(),
-  // Сартр — всевидящее око (взгляд Другого)
-  sartre: c => `
-    <path d="M20 95 Q 75 50 130 95 Q 75 140 20 95 Z"/>
-    <circle cx="75" cy="95" r="16"/>
-    <circle cx="75" cy="95" r="5" fill="${c}" stroke="none"/>`,
-};
-// ветви лавра: листья по дуге — без единой картинки
-function laurelSVG(){
-  const cx = 75, cy = 95, R = 55;
-  let s = '';
-  const branch = (a0, a1) => {
-    for (let i = 0; i <= 6; i++){
-      const t  = (a0 + (a1 - a0) * i / 6) * Math.PI / 180;
-      const x  = cx + R * Math.cos(t), y = cy + R * Math.sin(t);
-      const nx = Math.cos(t), ny = Math.sin(t);   // наружу от центра
-      const tx = -ny, ty = nx;                    // вдоль ветви
-      const L  = 11 - i;
-      s += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + tx * L * .95).toFixed(1)}" y2="${(y + ty * L * .95).toFixed(1)}"/>`;
-      s += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + nx * L * .55 + tx * L * .35).toFixed(1)}" y2="${(y + ny * L * .55 + ty * L * .35).toFixed(1)}"/>`;
-    }
+// Лавровый венок Марка Аврелия: эллиптическая лента вокруг головы + листья — без картинок
+function laurelWreath(col){
+  const cx = 75, cy = 86, rx = 42, ry = 28;       // венок охватывает голову, верх касается волос
+  const a0 = 200, a1 = 340, N = 12;               // дуга над головой 200°…340°
+  const P = (aDeg, k = 1) => {
+    const a = aDeg * Math.PI / 180;
+    return [cx + rx * k * Math.cos(a), cy + ry * k * Math.sin(a)];
   };
-  branch(146, 214); branch(34, -34);
+  let s = '';
+  // лента венка — две дуги (наружная и внутренняя)
+  const [sx1, sy1] = P(a0), [ex1, ey1] = P(a1);
+  s += `<path d="M${sx1.toFixed(1)} ${sy1.toFixed(1)} A${rx} ${ry} 0 0 1 ${ex1.toFixed(1)} ${ey1.toFixed(1)}"/>`;
+  const [sx2, sy2] = P(a0, .87), [ex2, ey2] = P(a1, .87);
+  s += `<path d="M${sx2.toFixed(1)} ${sy2.toFixed(1)} A${(rx * .87).toFixed(1)} ${(ry * .87).toFixed(1)} 0 0 1 ${ex2.toFixed(1)} ${ey2.toFixed(1)}"/>`;
+  // листья-«линзы» вдоль ленты, слегка тонированные цветом философа
+  for (let i = 0; i <= N; i++){
+    const a  = (a0 + (a1 - a0) * i / N) * Math.PI / 180;
+    const px = cx + rx * Math.cos(a), py = cy + ry * Math.sin(a);
+    let tx = -rx * Math.sin(a), ty = ry * Math.cos(a);          // касательная к эллипсу
+    const tl = Math.hypot(tx, ty); tx /= tl; ty /= tl;
+    let nx = Math.cos(a) / rx, ny = Math.sin(a) / ry;           // нормаль наружу
+    const nl = Math.hypot(nx, ny); nx /= nl; ny /= nl;
+    const L = 9, Wd = 3.6;
+    const qx = px + tx * L, qy = py + ty * L;
+    s += `<path fill="${col}" fill-opacity=".14" stroke="none" d="M${(px + nx * 1.5).toFixed(1)} ${(py + ny * 1.5).toFixed(1)} Q${(px + nx * Wd).toFixed(1)} ${(py + ny * Wd).toFixed(1)} ${qx.toFixed(1)} ${qy.toFixed(1)} Q${(qx - nx * Wd * .5).toFixed(1)} ${(qy - ny * Wd * .5).toFixed(1)} ${(px + nx * 1.5).toFixed(1)} ${(py + ny * 1.5).toFixed(1)} Z"/>`;
+    s += `<path d="M${(px + nx * 1.5).toFixed(1)} ${(py + ny * 1.5).toFixed(1)} Q${(px + nx * Wd).toFixed(1)} ${(py + ny * Wd).toFixed(1)} ${qx.toFixed(1)} ${qy.toFixed(1)} Q${(qx - nx * Wd * .5).toFixed(1)} ${(qy - ny * Wd * .5).toFixed(1)} ${(px + nx * 1.5).toFixed(1)} ${(py + ny * 1.5).toFixed(1)} Z"/>`;
+  }
   return s;
 }
 
-/* --- Генератор портрета-созвездия --- */
+/* --- Сборка SVG-портрета: свечение → звёзды → венок → линии → глаза --- */
 function buildPortraitSVG(p, idx){
   const col = p.color;
-  const line = hexToRgba(col, .5);
+  const art = PORTRAIT_ART[p.id];
   const rnd = seeded(idx * 7919 + 17);
-  // звёзды внутри круга портрета
+  // фоновые звёзды вокруг головы (детерминированные — не «прыгают»)
   let starDots = '';
-  for (let i = 0; i < 12; i++){
-    const a = rnd() * TAU, r = 16 + rnd() * 46;
-    starDots += `<circle cx="${(BUST.cx + Math.cos(a) * r).toFixed(1)}" cy="${(BUST.cy + Math.sin(a) * r * .92).toFixed(1)}" r="${(0.7 + rnd() * 0.9).toFixed(2)}" fill="${col}" opacity="${(0.18 + rnd() * .3).toFixed(2)}"/>`;
+  for (let i = 0; i < 14; i++){
+    const a = rnd() * TAU, r = 30 + rnd() * 44;
+    starDots += `<circle cx="${(75 + Math.cos(a) * r).toFixed(1)}" cy="${(88 + Math.sin(a) * r * .92).toFixed(1)}" r="${(0.7 + rnd() * 0.9).toFixed(2)}" fill="${col}" opacity="${(0.16 + rnd() * .28).toFixed(2)}"/>`;
   }
-  // точки профиля: ключевые — цветные и крупнее
-  const allPts = [...BUST.front, ...BUST.back, BUST.eye, BUST.ear, BUST.cheek];
-  const dotsSvg = allPts.map((q, i) =>
-    `<circle cx="${q[0]}" cy="${q[1]}" r="${BUST.big.includes(i) ? 2.3 : 1.5}" fill="${BUST.big.includes(i) ? col : '#EDEDF2'}" opacity="${BUST.big.includes(i) ? .95 : .7}"/>`
-  ).join('');
-  // внутренние линии «лица»: бровь–глаз, глаз–нос, ухо–затылок,
-  // ухо–скула, скула–челюсть, линия шеи
-  const inner = [
-    [51,52,60,55],[60,55,47,58],[79,76,99,76],[79,76,63,88],[63,88,63,104],[95,114,60,118],
-  ].map(l => `<line x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="${line}" stroke-width="1"/>`).join('');
-  const poly = pts => `<polyline points="${pts.map(q => q.join(',')).join(' ')}" fill="none" stroke="${line}" stroke-width="1"/>`;
-  const glyph = PORTRAIT_GLYPHS[p.id] ? PORTRAIT_GLYPHS[p.id](col) : '';
+  const laurel = p.id === 'marcus'
+    ? `<g stroke="${col}" fill="none" stroke-width="1.3" stroke-linejoin="round">${laurelWreath(col)}</g>` : '';
   return `
-<svg viewBox="0 0 150 180" role="img" aria-label="Портрет-созвездие: ${p.name}">
+<svg viewBox="0 0 150 180" role="img" aria-label="Портрет: ${p.name}">
   <defs>
     <radialGradient id="pw-${idx}">
-      <stop offset="0" stop-color="${col}" stop-opacity=".26"/>
-      <stop offset=".65" stop-color="${col}" stop-opacity=".08"/>
+      <stop offset="0" stop-color="${col}" stop-opacity=".20"/>
+      <stop offset=".65" stop-color="${col}" stop-opacity=".07"/>
       <stop offset="1" stop-color="${col}" stop-opacity="0"/>
     </radialGradient>
   </defs>
-  <circle cx="${BUST.cx}" cy="${BUST.cy}" r="72" fill="url(#pw-${idx})"/>
-  <g stroke="${col}" fill="none" stroke-width="1.3" stroke-linecap="round" opacity=".15">${glyph}</g>
+  <circle cx="75" cy="88" r="76" fill="url(#pw-${idx})"/>
+  <circle cx="75" cy="88" r="68" fill="none" stroke="${hexToRgba(col, .30)}" stroke-width="1"/>
+  <circle cx="75" cy="88" r="76" fill="none" stroke="${hexToRgba(col, .16)}" stroke-width="1" stroke-dasharray="2 7"/>
   ${starDots}
-  ${poly(BUST.front)}
-  ${poly(BUST.back)}
-  ${inner}
-  ${dotsSvg}
-  <circle cx="${BUST.cx}" cy="${BUST.cy}" r="66" fill="none" stroke="${hexToRgba(col, .35)}" stroke-width="1"/>
-  <circle cx="${BUST.cx}" cy="${BUST.cy}" r="74" fill="none" stroke="${hexToRgba(col, .18)}" stroke-width="1" stroke-dasharray="2 7"/>
+  ${laurel}
+  <g stroke="${col}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="${art.outline}" stroke-width="1.9"/>
+    <path d="${art.detail}" stroke-width="1.1" opacity=".92"/>
+    ${art.extra || ''}
+  </g>
+  <g fill="${col}" stroke="none">
+    ${art.eyes.map(e => `<circle cx="${e[0]}" cy="${e[1]}" r="2.1"/>`).join('')}
+  </g>
   <g class="ws-orbit">
-    <circle cx="${BUST.cx}" cy="${BUST.cy - 74}" r="5.5" fill="${col}" opacity=".22"/>
-    <circle cx="${BUST.cx}" cy="${BUST.cy - 74}" r="2.3" fill="${col}"/>
+    <circle cx="75" cy="12" r="5.5" fill="${col}" opacity=".22"/>
+    <circle cx="75" cy="12" r="2.3" fill="${col}"/>
   </g>
 </svg>`;
 }
@@ -1570,6 +1686,7 @@ function killWorldST(){
 /* --- Показ мира: шапка анимируется, секции — по скроллу --- */
 function showWorld(p, idx){
   mapScreen.hidden = true;
+  hideIntroNow();                                  // интро скрыто целиком (защита от «призрака» кнопок)
   if (HAS_GSAP) gsap.set(mapSvg, { clearProps: 'transform' });   // сброс влёта под покровом вспышки
   mountWorld(p, idx);
   worldScreen.hidden = false;
@@ -1611,7 +1728,7 @@ function showWorld(p, idx){
       if (HAS_ST) ScrollTrigger.refresh();
     });
 
-    setTimeout(() => document.getElementById('world-back').focus({ preventScroll: true }), 1000);
+    setTimeout(() => document.getElementById('world-back2').focus({ preventScroll: true }), 1000);
   } else {
     flash.style.opacity = 0;
   }
@@ -1643,23 +1760,21 @@ function focusMapNode(){
 /* --- Назад: карта → интро --- */
 function mapToIntro(){
   if (entering || mapScreen.hidden) return;
-  entering = true;
+  entering = true;                                 // до конца затухания карты клики/Escape заблокированы
   Sound.blip();
   hideCard();
   setAmbient(1, 1, 1, 1.8);
   if (HAS_GSAP && !REDUCED){
     gsap.to(mapScreen, {
       opacity: 0, duration: .55, ease: 'power2.in',
-      onComplete: () => { mapScreen.hidden = true; mapScreen.style.opacity = ''; }
+      onComplete: () => { mapScreen.hidden = true; mapScreen.style.opacity = ''; entering = false; }
     });
-    gsap.to(['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'],
-      { opacity: 1, y: 0, duration: .8, stagger: .06, delay: .5, ease: 'power2.out' });
   } else {
     mapScreen.hidden = true;
-    document.getElementById('intro').style.opacity = 1;
+    entering = false;
   }
+  revealIntro();                                   // интро возвращается целиком и без «хвостов»
   introActive = true;
-  entering = false;
 }
 
 /* --- События карты: ховер, клик, клавиатура --- */
@@ -1689,11 +1804,10 @@ mapSvg.addEventListener('keydown', e => {
   e.preventDefault();
   flyToWorld(PHILOSOPHERS[+g.dataset.i], g);
 });
-document.getElementById('world-back').addEventListener('click', backToMap);
 document.getElementById('world-back2').addEventListener('click', backToMap);
 document.getElementById('map-back').addEventListener('click', mapToIntro);
 window.addEventListener('keydown', e => {
-  if (e.key !== 'Escape') return;
+  if (e.key !== 'Escape' || entering) return;      // во время анимации перехода Escape игнорируется
   if (!worldScreen.hidden) backToMap();
   else if (!mapScreen.hidden) mapToIntro();
 });
