@@ -10,14 +10,14 @@
 <!-- ============================================================
   ФИЛОСОФИЯ В ЭПОХУ АЛГОРИТМОВ
   Часть 0 · прелоадер + интро  |  Часть 1 · карта идей (SVG-граф)
-  Часть 2 · миры философов ×6  |  Части 3–4 · тест + финал (далее)
+  Часть 2 · миры философов ×6  |  Часть 3 · тест  |  Часть 4 · финал (далее)
   ------------------------------------------------------------
   Структура файла:
     1. Шрифты (Inter — интерфейс, Cormorant — заголовки/цитаты)
     2. GSAP + ScrollTrigger через CDN (скролл используется только
        внутри миров — нативный контейнер, Lenis не нужен)
     3. CSS: переменные → курсор → прелоадер → сцена → интро
-       → звук → карта → мир философа → адаптив → reduced-motion
+       → звук → карта → мир философа → тест → адаптив → reduced-motion
     4. JS: конфиг → утилиты → canvas-мир (частицы/узлы/камера)
        → прелоадер → типографика → звук → курсор → GSAP-сцены
        → карта → мир философа (портреты line-art, ScrollTrigger)
@@ -276,8 +276,13 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 .mc-years{ font:400 10.5px/1 var(--sans); letter-spacing:.14em; color:var(--dim); margin:7px 0 10px }
 .mc-idea{ font:300 12.5px/1.65 var(--sans); color:rgba(237,237,242,.72) }
 .mc-go{ font:500 9.5px/1 var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--cc); margin-top:12px }
+/* подвал карты: подсказка + вход в тест (часть 3) */
+.map-foot{
+  display:flex; flex-direction:column; align-items:center; gap:12px;
+  padding:0 24px calc(18px + var(--safe-b));
+}
 #map-hint{
-  text-align:center; padding:0 24px calc(18px + var(--safe-b));
+  text-align:center;
   font:300 11px/1.6 var(--sans); letter-spacing:.22em; text-indent:.22em;
   text-transform:uppercase; color:rgba(237,237,242,.35);
 }
@@ -387,10 +392,214 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 }
 /* низ мира */
 .ws-foot{ display:flex; flex-direction:column; align-items:center; gap:20px; margin-top:clamp(44px, 7vh, 76px); text-align:center }
+.ws-foot-btns{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center }
 .ws-scan{
   font:300 11px/1.9 var(--sans); letter-spacing:.18em; text-indent:.18em;
   text-transform:uppercase; color:rgba(237,237,242,.35); max-width:430px;
 }
+
+/* ==========================================================
+   7.5 ЭКРАН 3 · ТЕСТ «КТО РЕШАЕТ — ТЫ ИЛИ АЛГОРИТМ?» — ЧАСТЬ 3
+   Один вопрос на экран → «анализ» от лица алгоритма → результат:
+   родственный философ + шесть голосов + индекс автономии.
+   ========================================================== */
+#quiz-screen{
+  position:absolute; inset:0; z-index:23;
+  background:radial-gradient(1100px 720px at 50% 28%, rgba(155,126,222,.10), transparent 68%);
+}
+#quiz-screen[hidden]{ display:none }
+#quiz-progress{
+  position:absolute; top:0; left:0; right:0; height:2px; z-index:6;
+  transform:scaleX(0); transform-origin:left; pointer-events:none;
+  background:linear-gradient(90deg, var(--accent), var(--gold));
+  box-shadow:0 0 14px rgba(155,126,222,.8);
+}
+#quiz-scroll{
+  position:absolute; inset:0; overflow-y:auto;
+  overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin; scrollbar-color:rgba(237,237,242,.16) transparent;
+}
+#quiz-scroll::-webkit-scrollbar{ width:8px }
+#quiz-scroll::-webkit-scrollbar-track{ background:transparent }
+#quiz-scroll::-webkit-scrollbar-thumb{ background:rgba(237,237,242,.14); border-radius:99px }
+.qz-inner{
+  width:min(720px, 100%); margin:0 auto; min-height:100%;
+  display:flex; flex-direction:column;
+  padding:clamp(72px, 10vh, 110px) 24px calc(56px + var(--safe-b));
+}
+.qz-head{ text-align:center; margin-bottom:clamp(30px, 5vh, 48px) }
+.qz-kicker{ color:var(--gold); margin-bottom:16px }
+.qz-title{
+  font:500 clamp(26px, 3.4vw, 44px)/1.15 var(--serif); color:var(--ink);
+  text-shadow:0 0 56px rgba(155,126,222,.25);
+}
+.qz-sub{
+  margin-top:12px; font:300 clamp(12.5px, 1.4vw, 14.5px)/1.6 var(--sans);
+  color:var(--dim); letter-spacing:.04em;
+}
+.qz-body{
+  margin:auto 0; width:100%;              /* авто-центр, без обрезки при переполнении */
+  display:flex; flex-direction:column; align-items:center; text-align:center;
+}
+/* --- вопрос --- */
+.qz-dots{ display:flex; gap:10px; margin-bottom:22px }
+.qz-dot{
+  width:6px; height:6px; border-radius:50%; background:rgba(237,237,242,.18);
+  transition:background .4s, box-shadow .4s, transform .4s;
+}
+.qz-dot.done{ background:var(--gold) }
+.qz-dot.cur{ background:var(--accent); box-shadow:0 0 10px rgba(155,126,222,.9); transform:scale(1.5) }
+.qz-count{
+  font:400 11px/1 var(--sans); letter-spacing:.3em; text-indent:.3em;
+  text-transform:uppercase; color:var(--dim); margin-bottom:18px;
+}
+.qz-question{
+  font:500 clamp(23px, 3vw, 36px)/1.3 var(--serif); color:var(--ink);
+  max-width:560px; text-shadow:0 0 44px rgba(155,126,222,.2);
+  margin-bottom:clamp(26px, 4vh, 38px);
+}
+.qz-options{ display:flex; flex-direction:column; gap:12px; width:min(560px, 100%) }
+.qz-opt{
+  appearance:none; text-align:left; display:flex; align-items:baseline; gap:14px;
+  border:1px solid rgba(237,237,242,.16); border-radius:14px;
+  background:rgba(237,237,242,.03); color:var(--ink);
+  padding:15px 18px; font:300 14px/1.55 var(--sans);
+  transition:border-color .3s, background .3s, transform .3s, box-shadow .3s;
+}
+.qz-opt .key{
+  flex:none; font:500 10px/1.9 var(--sans); letter-spacing:.18em; color:var(--dim);
+  transition:color .3s;
+}
+.qz-opt:hover, .qz-opt:focus-visible{
+  border-color:rgba(155,126,222,.55); background:rgba(155,126,222,.07);
+  transform:translateX(4px);
+}
+.qz-opt.sel{
+  border-color:rgba(232,184,75,.75); background:rgba(232,184,75,.08);
+  box-shadow:0 0 26px rgba(232,184,75,.14);
+}
+.qz-opt.sel .key{ color:var(--gold) }
+/* --- «анализ» от лица алгоритма --- */
+.qz-scanbox{
+  position:relative; width:min(340px, 74vw); height:104px; margin-bottom:26px;
+  border:1px solid rgba(155,126,222,.4); border-radius:16px; overflow:hidden;
+  background:radial-gradient(rgba(155,126,222,.22) 1px, transparent 1.5px);
+  background-size:18px 18px;
+}
+.qz-scanline{
+  position:absolute; left:5%; right:5%; height:2px;
+  background:linear-gradient(90deg, transparent, var(--gold), transparent);
+  box-shadow:0 0 18px rgba(232,184,75,.85);
+  animation:qzScan 1.7s ease-in-out infinite;
+}
+@keyframes qzScan{ 0%{top:6%} 50%{top:92%} 100%{top:6%} }
+.qz-term{
+  width:min(560px, 100%); text-align:left;
+  font:300 12.5px/2.1 var(--sans); letter-spacing:.05em;
+  color:rgba(237,237,242,.66);
+}
+.qz-term .t-line{ display:block }
+.qz-term .t-line .pre{ color:var(--accent); margin-right:8px }
+.qz-term .t-line.ok, .qz-term .t-line.ok .pre{ color:var(--gold) }
+#qz-skip{ margin-top:22px }
+/* --- результат --- */
+.qz-portrait{
+  width:clamp(150px, 20vh, 196px); margin-bottom:10px;
+  filter:drop-shadow(0 0 26px var(--rc-line, rgba(155,126,222,.3)));
+}
+.qz-portrait svg{ display:block; width:100%; height:auto; overflow:visible }
+.qz-r-name{
+  font:500 clamp(36px, 5.4vw, 64px)/1.08 var(--serif); color:var(--ink);
+  text-shadow:0 0 56px var(--rc-line, rgba(155,126,222,.3));
+}
+.qz-r-epithet{
+  font:400 11px/1 var(--sans); letter-spacing:.3em; text-indent:.3em;
+  text-transform:uppercase; color:var(--dim); margin:14px 0 22px;
+}
+.qz-r-quote{
+  font:italic 500 clamp(19px, 2.5vw, 27px)/1.45 var(--serif);
+  color:var(--rc, var(--accent)); text-shadow:0 0 40px var(--rc-line, transparent);
+}
+.qz-r-src{
+  margin-top:12px; font:400 10.5px/1 var(--sans);
+  letter-spacing:.22em; text-indent:.22em; text-transform:uppercase; color:var(--dim);
+}
+.qz-r-why{
+  margin-top:26px; max-width:600px;
+  font:300 clamp(13.5px, 1.5vw, 15.5px)/1.85 var(--sans);
+  color:rgba(237,237,242,.82);
+}
+/* шесть голосов: распределение ответов между философами */
+.qz-voices{ width:min(560px, 100%); margin-top:34px; text-align:left }
+.qz-voices-title{
+  display:flex; align-items:center; gap:12px; margin-bottom:14px;
+  font:500 10.5px/1 var(--sans); letter-spacing:.26em; text-indent:.26em;
+  text-transform:uppercase; color:var(--dim);
+}
+.qz-voices-title::after{
+  content:''; flex:1; height:1px;
+  background:linear-gradient(90deg, rgba(237,237,242,.18), transparent);
+}
+.qz-vrow{ display:flex; align-items:center; gap:12px; padding:5px 0 }
+.qz-vname{
+  flex:none; width:120px; font:400 11.5px/1.3 var(--sans);
+  letter-spacing:.08em; color:rgba(237,237,242,.6);
+}
+.qz-vrow.top .qz-vname{ color:var(--rc); font-weight:500 }
+.qz-vbar{ flex:1; height:3px; border-radius:99px; background:rgba(237,237,242,.09); overflow:hidden }
+.qz-vbar span{
+  display:block; height:100%; width:0; border-radius:inherit;
+  background:linear-gradient(90deg, rgba(237,237,242,.35), rgba(237,237,242,.55));
+}
+.qz-vrow.top .qz-vbar span{
+  background:linear-gradient(90deg, var(--rc-line, var(--accent)), var(--rc, var(--accent)));
+  box-shadow:0 0 12px var(--rc-line, transparent);
+}
+.qz-vpct{
+  flex:none; width:44px; text-align:right; font:400 11px/1 var(--sans);
+  color:rgba(237,237,242,.45); font-variant-numeric:tabular-nums;
+}
+.qz-vrow.top .qz-vpct{ color:var(--rc); font-weight:500 }
+/* индекс автономии: «кто в итоге у руля» */
+.qz-index{
+  width:min(560px, 100%); margin-top:34px; padding:22px 22px 20px;
+  border:1px solid rgba(155,126,222,.3); border-radius:16px;
+  background:linear-gradient(180deg, rgba(155,126,222,.07), rgba(10,10,15,.5));
+}
+.qz-index-head{
+  display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;
+  font:500 10.5px/1 var(--sans); letter-spacing:.26em; text-indent:.26em;
+  text-transform:uppercase; color:var(--dim);
+}
+#qz-index-val{
+  font:500 24px/1 var(--serif); color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.qz-index-bar{ height:4px; border-radius:99px; background:rgba(237,237,242,.1); overflow:hidden }
+#qz-index-fill{
+  display:block; height:100%; width:0; border-radius:inherit;
+  background:linear-gradient(90deg, var(--accent), var(--gold));
+  box-shadow:0 0 14px rgba(232,184,75,.55);
+}
+.qz-index-verdict{
+  margin-top:16px; text-align:left;
+  font:300 13px/1.75 var(--sans); color:rgba(237,237,242,.75);
+}
+.qz-actions{
+  display:flex; gap:14px; flex-wrap:wrap; justify-content:center;
+  margin-top:clamp(34px, 5vh, 50px);
+}
+.qz-scan-note{ margin-top:22px }
+/* кнопка-ссылка (вход в тест с карты) */
+.link-btn{
+  appearance:none; background:none; border:none; cursor:pointer;
+  color:rgba(237,237,242,.45); padding:4px 2px 6px;
+  font:500 10.5px/1.5 var(--sans); letter-spacing:.22em; text-indent:.22em;
+  text-transform:uppercase;
+  border-bottom:1px solid rgba(237,237,242,.18);
+  transition:color .3s, border-color .3s;
+}
+.link-btn:hover{ color:var(--gold); border-color:rgba(232,184,75,.55) }
 
 /* Статичное раскрытие контента (reduced motion или нет GSAP) */
 .reveal-static .overtitle,
@@ -418,6 +627,7 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   #map-svg .node-core{ r:7 }
   #map-card{ width:212px }
   .w-name{ font-size:clamp(38px, 11vw, 52px) }
+  .qz-vname{ width:96px; font-size:10.5px }
 }
 @media (max-width:480px){
   .overtitle{ margin-bottom:26px }
@@ -429,6 +639,12 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   .map-head{ padding-top:56px }
   .ws-inner{ padding-left:18px; padding-right:18px }
   .ws-label{ letter-spacing:.16em; text-indent:.16em }
+  .qz-inner{ padding-left:16px; padding-right:16px }
+  .qz-opt{ padding:13px 14px; font-size:13.5px }
+  .qz-vname{ width:82px }
+  .qz-index{ padding:16px }
+  .qz-actions{ gap:10px }
+  .ws-foot-btns{ gap:10px }
 }
 
 /* ==========================================================
@@ -505,7 +721,10 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
         <div class="mc-go">клик — войти в мир →</div>
       </div>
     </div>
-    <p id="map-hint">Наведите на узел — клик откроет мир</p>
+    <div class="map-foot">
+      <p id="map-hint">Наведите на узел — клик откроет мир</p>
+      <button id="map-quiz" class="link-btn" data-hover>Пройти тест: кто решает — ты или алгоритм? →</button>
+    </div>
     <button id="map-back" class="ghost-btn" data-hover>← Интро</button>
   </section>
 
@@ -545,9 +764,71 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
         </section>
 
         <footer class="ws-foot ws-reveal">
-          <button id="world-back2" class="ghost-btn" data-hover>← К карте</button>
+          <div class="ws-foot-btns">
+            <button id="world-back2" class="ghost-btn" data-hover>← К карте</button>
+            <button id="world-quiz" class="ghost-btn" data-hover>Пройти тест →</button>
+          </div>
           <p class="ws-scan">кто принимает твои решения — ты или алгоритм?</p>
         </footer>
+      </div>
+    </div>
+  </section>
+
+  <!--
+    ЭКРАН 3 · ТЕСТ «Кто решает — ты или алгоритм?» — ЧАСТЬ 3
+    Восемь вопросов (QUIZ) по одному на экран, затем «анализ» от
+    лица алгоритма и результат: родственный философ + шесть голосов
+    + индекс автономии. Вход: ссылка под картой (#map-quiz) или
+    футер мира (#world-quiz). Выход: «← К карте» / Escape.
+  -->
+  <section id="quiz-screen" hidden aria-label="Тест: кто принимает твои решения">
+    <div id="quiz-progress" aria-hidden="true"></div>
+    <div id="quiz-scroll">
+      <div class="qz-inner">
+        <header class="qz-head">
+          <div class="kicker qz-kicker">Часть 3 · Тест</div>
+          <h2 class="qz-title">Кто решает — ты или алгоритм?</h2>
+          <p class="qz-sub">Восемь вопросов без правильных ответов. Отвечай первым, что отзовётся.</p>
+        </header>
+        <div class="qz-body">
+          <!-- вопрос (наполняется из QUIZ в JS) -->
+          <div id="qz-view" aria-live="polite">
+            <div class="qz-dots" id="qz-dots" aria-hidden="true"></div>
+            <div class="qz-count" id="qz-count"></div>
+            <h3 class="qz-question" id="qz-question"></h3>
+            <div class="qz-options" id="qz-options" role="group" aria-label="Варианты ответа"></div>
+          </div>
+          <!-- «анализ» от лица алгоритма -->
+          <div id="qz-analysis" hidden aria-live="polite">
+            <div class="qz-scanbox" aria-hidden="true"><div class="qz-scanline"></div></div>
+            <div class="qz-term" id="qz-term"></div>
+            <button id="qz-skip" class="link-btn" data-hover>пропустить →</button>
+          </div>
+          <!-- результат (наполняется в showResult) -->
+          <div id="qz-result" hidden aria-live="polite">
+            <div class="kicker qz-kicker">Диагноз алгоритма</div>
+            <div class="qz-portrait" id="qz-portrait"></div>
+            <h3 class="qz-r-name" id="qz-r-name"></h3>
+            <div class="qz-r-epithet" id="qz-r-epithet"></div>
+            <blockquote class="qz-r-quote" id="qz-r-quote"></blockquote>
+            <div class="qz-r-src" id="qz-r-src"></div>
+            <p class="qz-r-why" id="qz-r-why"></p>
+            <div class="qz-voices" aria-label="Шесть голосов в твоих ответах">
+              <div class="qz-voices-title">Шесть голосов в твоих ответах</div>
+              <div id="qz-vrows"></div>
+            </div>
+            <div class="qz-index">
+              <div class="qz-index-head"><span>Индекс автономии</span><span id="qz-index-val">0%</span></div>
+              <div class="qz-index-bar"><span id="qz-index-fill"></span></div>
+              <p class="qz-index-verdict" id="qz-index-verdict"></p>
+            </div>
+            <div class="qz-actions">
+              <button id="qz-again" class="ghost-btn" data-hover>↻ Пройти ещё раз</button>
+              <button id="qz-back" class="ghost-btn" data-hover>← К карте</button>
+            </div>
+            <p class="ws-scan qz-scan-note">кто принимает твои решения — ты или алгоритм?</p>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -576,8 +857,9 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
      6. Кастомный курсор
      7. GSAP-сцены: интро → zoom-переход
      8. Экран 1 · карта (SVG-граф) и навигация
-     9. Экран 2 · мир философа: портрет-созвездие, контент,
+     9. Экран 2 · мир философа: портреты line-art, контент,
         скролл-анимации (ScrollTrigger)
+     10. Экран 3 · тест: вопросы → «анализ» → результат (часть 3)
    ============================================================ */
 
 /* ------------------------------------------------------------
@@ -603,7 +885,8 @@ const PHILOSOPHERS = [
     ideaFull:'Сократ ничего не написал и не дал ни одного ответа — только вопросы. Его майевтика — «повивальное искусство» мысли: расшатать привычные уверенности собеседника, чтобы истина родилась у него самого, а не была вручена готовой.',
     quote:'Я знаю, что ничего не знаю', quoteSrc:'Платон · «Апология Сократа»',
     algo:'Каждую рекомендацию он превратил бы в собеседника и завалил бы вопросами: «Почему ты решил, что мне это понравится? Кто сказал, что я это люблю? А я сам это проверял?». Алгоритм, который никогда не сомневается, для него не мудр — просто болтлив. Знать, по Сократу, — значит уметь ответить, почему; лента не умеет отвечать — она умеет показывать.',
-    question:'Ты задаёшь вопросы своей ленте — или она задаёт вопросы тебе?'
+    question:'Ты задаёшь вопросы своей ленте — или она задаёт вопросы тебе?',
+    match:'Ты не принимаешь ответ, пока сам его не проверишь вопросом. Лента для тебя — не истина, а повод спросить: «а почему именно это?». Сократ назвал бы такое сомнение началом мудрости.'
   },
   {
     id:'descartes', name:'Декарт', color:'#6FA8DC', x:0.50, y:0.14, mx:620, my:150,
@@ -612,7 +895,8 @@ const PHILOSOPHERS = [
     ideaFull:'Сомнение у Декарта — не слабость, а инструмент: отбрось всё, в чём можно усомниться, — привычки, авторитеты, показания чувств, — пока не останется единственное несомненное. Сам акт сомнения и есть мышление; из него, как из первой точки, заново выстраивается вся картина мира.',
     quote:'Мыслю — следовательно, существую', quoteSrc:'«Рассуждение о методе»',
     algo:'Он усомнился бы и в алгоритме — и нашёл бы в нём одно несомненное: того, кто проверяет. Пока ты способен отличить свой выбор от предложенного, ты существуешь как мыслящий. Опасна не машина — опасно перестать сомневаться и принять первые строки выдачи за истину. Правило метода простое: считать истинным лишь то, что проверил ты сам.',
-    question:'Что из увиденного сегодня ты проверил сам?'
+    question:'Что из увиденного сегодня ты проверил сам?',
+    match:'Прежде чем поверить, ты перепроверяешь. Привычки, авторитеты, первые строки выдачи — всё проходит через фильтр сомнения и лишь потом становится твоим. Декарт назвал бы это ясным мышлением.'
   },
   {
     id:'kant', name:'Кант', color:'#9B7EDE', x:0.85, y:0.38, mx:950, my:300,
@@ -621,7 +905,8 @@ const PHILOSOPHERS = [
     ideaFull:'Не разум подстраивается под мир — мир подстраивается под формы разума. А в нравственности всё решает мотив: поступок свободен, только если его правило ты готов сделать всеобщим законом. Свобода — не «делай что хочешь», а «давай себе закон сам».',
     quote:'Имей мужество пользоваться собственным умом', quoteSrc:'«Ответ на вопрос: что такое Просвещение?»',
     algo:'Кант разделил бы тебя надвое: феномен — данные, которые собирает машина, и ноумен — ты сам, вещь-в-себе, недосягаемая ни для одного датчика. Алгоритм безупречно описывает первое и никогда не увидит второе. Его вопрос был бы жёстче любого аудита: может ли правило твоей ленты стать всеобщим законом? Если все смотрят одно и то же — никто не мыслит.',
-    question:'Твой выбор — твой закон или чужая формула?'
+    question:'Твой выбор — твой закон или чужая формула?',
+    match:'У тебя есть собственные правила, и ты держишься их, даже когда неудобно. Для Канта это и есть свобода: не брать готовую формулу, а давать себе закон сам.'
   },
   {
     id:'nietzsche', name:'Ницше', color:'#E5484D', x:0.72, y:0.82, mx:830, my:590,
@@ -630,7 +915,8 @@ const PHILOSOPHERS = [
     ideaFull:'Ценности не выдаются — они создаются. Воля к власти — не господство над другими, а преодоление себя: собрать из хаоса собственную шкалу и жить по ней. Готовые истины он подозревал в усталости: «так принято» — чаще всего диагноз, а не аргумент.',
     quote:'Стань тем, кто ты есть', quoteSrc:'«Весёлая наука»',
     algo:'В ленте он увидел бы новую мораль стада: «так делают все», «это набирает лайки». Он потребовал бы разбить шкалу, по которой тебя мерят, — рейтинги, охваты, скоринги, — как разбивали старые скрижали. Одинаковые рекомендации — не судьба, а стыд: машине выгодно, чтобы все были удобными. Твоя задача — перегрузить формулу собой.',
-    question:'Твои ценности — твои или выданы лентой?'
+    question:'Твои ценности — твои или выданы лентой?',
+    match:'Ты не позволяешь шкале мерить себя: рейтинги и плейлисты — не твои скрижали. Свою шкалу ты предпочитаешь писать сам. Ницше назвал бы это волей к себе.'
   },
   {
     id:'marcus', name:'Марк Аврелий', color:'#7FB88A', x:0.14, y:0.78, mx:430, my:620,
@@ -639,7 +925,8 @@ const PHILOSOPHERS = [
     ideaFull:'Император писал «к самому себе» на военных стоянках: ранит не событие, а суждение о нём. Властвовать имеет смысл только над тем, что тебе подвластно, — над своим суждением, желанием, действием. Всё остальное — чужой ход в общей игре.',
     quote:'Счастье твоей жизни зависит от качества твоих мыслей', quoteSrc:'«Размышления»',
     algo:'На ленту он смотрел бы, как на войско: смотри, но не подчиняйся. Возмущение в фиде — не твоё возмущение, пока ты сам не вынес суждение. Стоик отличает сигнал от шума: гнев — от новости, желание — от рекламы. Его утренняя практика звучала бы вполне современно: «сегодня тебя снова будут давить на слабые места — и всё же решение остаётся внутри», там, куда не дотянуться никакому алгоритму.',
-    question:'Что сейчас в твоей власти — а что владеет тобой?'
+    question:'Что сейчас в твоей власти — а что владеет тобой?',
+    match:'Ты держишь дистанцию между потоком и собой: смотришь, слушаешь — но решаешь внутри. «Размышления» Марка Аврелия писались ровно для такого внутреннего редута.'
   },
   {
     id:'sartre', name:'Сартр', color:'#D9885F', x:0.42, y:0.62, mx:640, my:380,
@@ -648,7 +935,8 @@ const PHILOSOPHERS = [
     ideaFull:'Существование предшествует сущности: сначала ты есть — потом определяешь себя выборами. Заранее написанного сценария нет, а значит, нет и оправданий. Свобода — приговор, на который нельзя подать апелляцию.',
     quote:'Человек осуждён быть свободным', quoteSrc:'«Экзистенциализм — это гуманизм»',
     algo:'Доверие алгоритму он назвал бы дурной верой: попыткой спрятаться от свободы, отдав выбор машине. «Алгоритм так показал» — не оправдание: клик всё равно твой. Даже отказываясь выбирать, ты выбираешь — отказ. Ответственность не отменяется, а лишь переименовывается в «ленту». Свобода давит — потому её так охотно отдают. Но осуждён быть свободным — именно ты.',
-    question:'«Алгоритм так показал» — это выбор или отговорка?'
+    question:'«Алгоритм так показал» — это выбор или отговорка?',
+    match:'Клик — это всегда выбор, а выбор — ответственность. Спрятаться за «алгоритм так показал» не выйдет: даже отказ выбирать — уже выбор. Сартр назвал бы попытку спрятаться дурной верой, а честность перед свободой — свободой.'
   },
 ];
 // Линии-связи между узлами (индексы PHILOSOPHERS) — «созвездие»
@@ -1438,22 +1726,23 @@ function showMap(first){
   worldScreen.hidden = true; worldScreen.style.opacity = '';
   mapScreen.hidden = false;
   introActive = false;
+  entering = false;                                // переход завершён: анимации ниже — декоративные, клики не блокируем
   setAmbient(0.3, 0.35, 1.15, 2.4);
   if (HAS_GSAP && !REDUCED){
     if (first){
       gsap.fromTo(mapScreen, { opacity: 0 }, { opacity: 1, duration: .7, ease: 'power2.out' });
       gsap.to(flash, { opacity: 0, duration: 1.1, delay: .3, ease: 'power2.out' });
-      gsap.timeline({ onComplete: () => { entering = false; } })
+      gsap.timeline()
         .fromTo('.map-head > *', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: .8, stagger: .1, ease: 'power3.out' }, .15)
         .to('.map-edge', { strokeDashoffset: 0, duration: 1.3, stagger: .1, ease: 'power2.inOut' }, .4)
         .fromTo('.map-node', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: .8, stagger: .09, ease: 'back.out(1.6)' }, .6)
-        .fromTo(['#map-hint', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .8 }, '-=0.3');
+        .fromTo(['#map-hint', '#map-quiz', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .8 }, '-=0.3');
     } else {
       gsap.fromTo(mapScreen, { opacity: 0 }, { opacity: 1, duration: .5, ease: 'power2.out' });
-      gsap.timeline({ onComplete: () => { entering = false; } })
+      gsap.timeline()
         .fromTo('.map-head > *', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .6, stagger: .07, ease: 'power2.out' }, .1)
         .fromTo('.map-node', { scale: .55, opacity: 0 }, { scale: 1, opacity: 1, duration: .65, stagger: .05, ease: 'back.out(1.7)' }, .15)
-        .fromTo(['#map-hint', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .6 }, .5);
+        .fromTo(['#map-hint', '#map-quiz', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .6 }, .5);
     }
   } else {
     flash.style.opacity = 0;
@@ -1479,7 +1768,7 @@ function flyToWorld(p, g){
     const ox = ringR.left + ringR.width / 2 - svgR.left;
     const oy = ringR.top + ringR.height / 2 - svgR.top;
     gsap.timeline()
-      .to(['.map-head > *', '#map-hint', '#map-back'],
+      .to(['.map-head > *', '#map-hint', '#map-quiz', '#map-back'],
         { opacity: 0, y: -16, duration: .4, stagger: .04, ease: 'power2.in' })
       .to(mapSvg, { scale: 9, transformOrigin: `${ox}px ${oy}px`, duration: 1.5, ease: 'power3.in' }, .1)
       .to(flash, { opacity: 1, duration: .5, ease: 'power2.in' }, 1.15)
@@ -1809,6 +2098,7 @@ document.getElementById('map-back').addEventListener('click', mapToIntro);
 window.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || entering) return;      // во время анимации перехода Escape игнорируется
   if (!worldScreen.hidden) backToMap();
+  else if (!quizScreen.hidden) closeQuiz();         // часть 3: тест закры
   else if (!mapScreen.hidden) mapToIntro();
 });
 
@@ -1816,6 +2106,367 @@ document.getElementById('enter-btn').addEventListener('click', () => {
   // кнопка ведёт к случайному узлу — каждый вход чуть иной
   enterTo(nodes[Math.floor(Math.random() * nodes.length)]);
 });
+
+/* ============================================================
+   10. ЭКРАН 3 · ТЕСТ «КТО РЕШАЕТ — ТЫ ИЛИ АЛГОРИТМ?» — ЧАСТЬ 3
+   Восемь вопросов по одному на экран; у каждого ответа:
+     a — вклад в «индекс автономии» (0..100),
+     w — голоса философам ({ id: вес }).
+   После ответов — «анализ» от лица алгоритма и результат:
+   родственный философ + шесть голосов + индекс автономии.
+   Вход: #map-quiz (подвал карты) и #world-quiz (футер мира).
+   Выход: «← К карте» или Escape. Фолбэк: без GSAP / reduced —
+   все состояния мгновенные.
+   ============================================================ */
+const QUIZ = [
+  {
+    q: 'Утро. Первое, что ты делаешь в телефоне?',
+    opts: [
+      { t: 'Открываю ленту — что там за ночь случилось', a: 14, w: { sartre: 1 } },
+      { t: 'Отвечаю людям — сообщения важнее потока', a: 52, w: { socrates: 1, marcus: 1 } },
+      { t: 'Пока ничего: лежу и думаю', a: 86, w: { descartes: 1, marcus: 1 } },
+    ],
+  },
+  {
+    q: 'Нужно выбрать фильм на вечер. Что делаешь?',
+    opts: [
+      { t: 'Смотрю «рекомендовано для тебя» — обычно попадает', a: 12, w: { sartre: 1 } },
+      { t: 'Читаю независимые подборки и отзывы', a: 55, w: { descartes: 2 } },
+      { t: 'Пересматриваю старое любимое — оно точно моё', a: 74, w: { nietzsche: 1, marcus: 1 } },
+    ],
+  },
+  {
+    q: 'Навигатор ведёт в объезд. Поедешь?',
+    opts: [
+      { t: 'Еду, как сказал навигатор, — он видит пробки', a: 12, w: { sartre: 1 } },
+      { t: 'Смотрю на карту: знаю двор покороче', a: 56, w: { socrates: 1, descartes: 1 } },
+      { t: 'Еду своей дорогой — так интереснее', a: 88, w: { nietzsche: 2 } },
+    ],
+  },
+  {
+    q: 'Лента показывает ровно то, что тебе нравится. Это…',
+    opts: [
+      { t: 'Удобно — время дороже', a: 18, w: { marcus: 1 } },
+      { t: 'Немного жутко: откуда она знает?', a: 58, w: { socrates: 2 } },
+      { t: 'Пойду искать то, чего она не показывает', a: 90, w: { nietzsche: 1, descartes: 1 } },
+    ],
+  },
+  {
+    q: 'Музыка закончилась. Кто ставит следующую?',
+    opts: [
+      { t: 'Автоплей — как всегда', a: 12, w: { sartre: 1 } },
+      { t: 'Мой плейлист, собранный за годы', a: 60, w: { kant: 2 } },
+      { t: 'Тишина — она тоже музыка', a: 84, w: { marcus: 2 } },
+    ],
+  },
+  {
+    q: 'Друг спрашивает, где встретиться. Ты…',
+    opts: [
+      { t: 'Кидаю ссылку из подборки «лучшее рядом»', a: 16, w: { sartre: 1 } },
+      { t: 'Перебираю варианты вслух — так честнее', a: 58, w: { socrates: 2 } },
+      { t: 'Предлагаю место, где меня помнят', a: 80, w: { marcus: 1, nietzsche: 1 } },
+    ],
+  },
+  {
+    q: 'Алгоритм ошибся и показывает не твоё. Что делаешь?',
+    opts: [
+      { t: 'Пропускаю — само подстроится', a: 14, w: { sartre: 1 } },
+      { t: 'Жму «не интересно» и объясняю почему', a: 52, w: { kant: 1, descartes: 1 } },
+      { t: 'Радуюсь: значит, меня не просчитали', a: 90, w: { nietzsche: 2 } },
+    ],
+  },
+  {
+    q: 'Последний. Твои решения — это…',
+    opts: [
+      { t: 'Результат привычек и данных — я довольно предсказуем', a: 10, w: { sartre: 1 } },
+      { t: 'Смесь моей воли и удобных предложений', a: 50, w: { kant: 1, socrates: 1 } },
+      { t: 'Моё. Я готов отвечать за каждый клик', a: 92, w: { sartre: 2 } },
+    ],
+  },
+];
+
+// Вердикт по индексу автономии (первый подходящий порог)
+const QUIZ_VERDICTS = [
+  { max: 35, text: 'Алгоритм первым знает, что ты выберешь, — и уже подложил это под палец. Свобода не потеряна, но она лежит в чужом кармане. Начни с малого: один осознанный клик в день.' },
+  { max: 65, text: 'Выбор остаётся за тобой — но алгоритм подсматривает через плечо и тихо переставляет варианты. Иногда спроси себя: это я захотел — или мне это показали?' },
+  { max: 101, text: 'Ты у руля: алгоритм для тебя — погода за окном, а не штурвал. Сократ сказал бы: уже неплохо. Но сомнение ещё никому не мешало.' },
+];
+
+// Строки «терминала» во время анализа (последняя — финальная)
+const QUIZ_TERM_LINES = [
+  'читаю паттерны ответов…',
+  'сверяю с шестью голосами карты…',
+  'взвешиваю сомнения и уверенности…',
+  'считаю индекс автономии…',
+  'готово.',
+];
+
+const quizScreen   = document.getElementById('quiz-screen');
+const quizScroll   = document.getElementById('quiz-scroll');
+const quizProgress = document.getElementById('quiz-progress');
+const qzView       = document.getElementById('qz-view');
+const qzDotsEl     = document.getElementById('qz-dots');
+const qzCountEl    = document.getElementById('qz-count');
+const qzQuestionEl = document.getElementById('qz-question');
+const qzOptionsEl  = document.getElementById('qz-options');
+const qzAnalysis   = document.getElementById('qz-analysis');
+const qzTermEl     = document.getElementById('qz-term');
+const qzResult     = document.getElementById('qz-result');
+const qzPortraitEl = document.getElementById('qz-portrait');
+const qzNameEl     = document.getElementById('qz-r-name');
+const qzEpithetEl  = document.getElementById('qz-r-epithet');
+const qzQuoteEl    = document.getElementById('qz-r-quote');
+const qzSrcEl      = document.getElementById('qz-r-src');
+const qzWhyEl      = document.getElementById('qz-r-why');
+const qzVrowsEl    = document.getElementById('qz-vrows');
+const qzIdxValEl   = document.getElementById('qz-index-val');
+const qzVerdictEl  = document.getElementById('qz-index-verdict');
+const QZ_KEYS = ['А', 'Б', 'В'];
+
+let quizOpen = false, quizLock = false, quizIdx = 0;
+let quizAnswers = [], quizTimers = [];
+
+function quizTimer(fn, ms){ quizTimers.push(setTimeout(fn, ms)); }
+function clearQuizTimers(){ quizTimers.forEach(clearTimeout); quizTimers = []; }
+
+/* --- Смена вида внутри теста: вопрос ⇄ анализ ⇄ результат --- */
+function showQuizView(el, enter){
+  qzView.hidden     = el !== qzView;
+  qzAnalysis.hidden = el !== qzAnalysis;
+  qzResult.hidden   = el !== qzResult;
+  if (HAS_GSAP && !REDUCED){
+    gsap.killTweensOf([qzView, qzAnalysis, qzResult]);
+    gsap.set([qzView, qzAnalysis, qzResult], { clearProps: 'all' });
+    if (enter) gsap.fromTo(el, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: .5, ease: 'power3.out' });
+  }
+}
+function swapTo(el, after){
+  const cur = [qzView, qzAnalysis, qzResult].find(x => !x.hidden);
+  if (HAS_GSAP && !REDUCED && cur){
+    gsap.to(cur, { opacity: 0, y: -18, duration: .3, ease: 'power2.in',
+      onComplete: () => { showQuizView(el, true); if (after) after(); } });
+  } else {
+    showQuizView(el, false);
+    if (after) after();
+  }
+}
+function entranceQuestion(){
+  if (HAS_GSAP && !REDUCED){
+    gsap.fromTo('#qz-view > *', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: .5, stagger: .06, ease: 'power2.out' });
+  }
+}
+
+/* --- Вопросы --- */
+function buildDots(){
+  qzDotsEl.innerHTML = '';
+  QUIZ.forEach(() => {
+    const d = document.createElement('span');
+    d.className = 'qz-dot';
+    qzDotsEl.appendChild(d);
+  });
+}
+function renderQuestion(i){
+  quizIdx = i;
+  const q = QUIZ[i];
+  qzCountEl.textContent    = `Вопрос ${String(i + 1).padStart(2, '0')} / ${String(QUIZ.length).padStart(2, '0')}`;
+  qzQuestionEl.textContent = q.q;
+  qzOptionsEl.innerHTML = '';
+  q.opts.forEach((o, k) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'qz-opt';
+    b.setAttribute('data-hover', '');
+    b.innerHTML = `<span class="key" aria-hidden="true">${QZ_KEYS[k]}</span><span class="txt"></span>`;
+    b.querySelector('.txt').textContent = o.t;
+    b.addEventListener('click', () => chooseOption(b, o));
+    qzOptionsEl.appendChild(b);
+  });
+  [...qzDotsEl.children].forEach((d, k) => {
+    d.className = 'qz-dot' + (k < i ? ' done' : k === i ? ' cur' : '');
+  });
+  quizProgress.style.transform = `scaleX(${i / QUIZ.length})`;
+}
+function chooseOption(btn, o){
+  if (quizLock) return;
+  quizLock = true;
+  Sound.blip();
+  btn.classList.add('sel');
+  quizAnswers.push(o);
+  qzDotsEl.children[quizIdx].className = 'qz-dot done';
+  quizProgress.style.transform = `scaleX(${(quizIdx + 1) / QUIZ.length})`;
+  const next = () => {
+    if (quizIdx + 1 < QUIZ.length){
+      swapTo(qzView, () => { renderQuestion(quizIdx + 1); entranceQuestion(); quizLock = false; });
+    } else {
+      startAnalysis();
+    }
+  };
+  quizTimer(next, (HAS_GSAP && !REDUCED) ? 430 : 120);
+}
+
+/* --- «Анализ» от лица алгоритма --- */
+function termLine(t, ok){
+  const s = document.createElement('span');
+  s.className = 't-line' + (ok ? ' ok' : '');
+  s.innerHTML = '<span class="pre" aria-hidden="true">›</span><span class="tx"></span>';
+  s.querySelector('.tx').textContent = t;
+  return s;
+}
+function startAnalysis(){
+  qzTermEl.innerHTML = '';
+  if (REDUCED || !HAS_GSAP){
+    QUIZ_TERM_LINES.forEach(t => qzTermEl.appendChild(termLine(t, t === QUIZ_TERM_LINES[QUIZ_TERM_LINES.length - 1])));
+    showResult();
+    return;
+  }
+  Sound.whoosh();
+  swapTo(qzAnalysis, null);
+  QUIZ_TERM_LINES.forEach((t, i) => {
+    quizTimer(() => {
+      const line = termLine(t, i === QUIZ_TERM_LINES.length - 1);
+      qzTermEl.appendChild(line);
+      gsap.fromTo(line, { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: .35, ease: 'power2.out' });
+      if (i < QUIZ_TERM_LINES.length - 1) Sound.blip();
+    }, 380 + i * 470);
+  });
+  quizTimer(showResult, 380 + QUIZ_TERM_LINES.length * 470 + 420);
+}
+
+/* --- Результат: родственный философ + шесть голосов + индекс --- */
+function showResult(){
+  clearQuizTimers();
+  quizLock = false;
+  const score = {};
+  PHILOSOPHERS.forEach(p => score[p.id] = 0);
+  let auto = 0;
+  quizAnswers.forEach(o => {
+    auto += o.a;
+    for (const k in (o.w || {})) score[k] += o.w[k];
+  });
+  const autoIdx = Math.round(auto / QUIZ.length);
+  let top = PHILOSOPHERS[0], topW = -1, total = 0;
+  PHILOSOPHERS.forEach(p => {
+    total += score[p.id];
+    if (score[p.id] > topW){ topW = score[p.id]; top = p; }
+  });
+
+  showQuizView(qzResult, false);
+  qzResult.style.setProperty('--rc', top.color);
+  qzResult.style.setProperty('--rc-line', hexToRgba(top.color, .32));
+
+  qzPortraitEl.innerHTML = buildPortraitSVG(top, 10 + PHILOSOPHERS.indexOf(top));   // id градиентов pw-10+ — без коллизий с мирами
+  qzNameEl.setAttribute('aria-label', top.name);
+  qzNameEl.innerHTML = `<span aria-hidden="true">${splitChars(top.name)}</span>`;
+  qzEpithetEl.textContent = top.epithet;
+  qzQuoteEl.textContent   = '«' + top.quote + '»';
+  qzSrcEl.textContent     = top.quoteSrc;
+  qzWhyEl.textContent     = top.match;
+  qzVerdictEl.textContent = QUIZ_VERDICTS.find(v => autoIdx <= v.max).text;
+
+  // шесть голосов: столбцы относительно лидера, % — честная доля от всех голосов
+  const maxW = Math.max(1, topW);
+  qzVrowsEl.innerHTML = '';
+  PHILOSOPHERS.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'qz-vrow' + (p === top ? ' top' : '');
+    const pct = total > 0 ? Math.round((100 * score[p.id]) / total) : 0;
+    const bw  = Math.round((100 * score[p.id]) / maxW);
+    row.innerHTML = `<span class="qz-vname"></span><span class="qz-vbar"><span data-w="${bw}"></span></span><span class="qz-vpct">${pct}%</span>`;
+    row.querySelector('.qz-vname').textContent = p.name;
+    qzVrowsEl.appendChild(row);
+  });
+  quizProgress.style.transform = 'scaleX(1)';
+
+  if (HAS_GSAP && !REDUCED){
+    gsap.fromTo('#qz-result > *', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: .7, stagger: .07, ease: 'power3.out' });
+    gsap.to('#qz-vrows .qz-vbar span', { width: (i, el) => el.dataset.w + '%', duration: 1.1, stagger: .07, delay: .45, ease: 'power2.out' });
+    gsap.to('#qz-index-fill', { width: autoIdx + '%', duration: 1.4, delay: .55, ease: 'power2.out' });
+    const cnt = { v: 0 };
+    gsap.to(cnt, {
+      v: autoIdx, duration: 1.4, delay: .55, ease: 'power2.out',
+      onUpdate: () => { qzIdxValEl.textContent = Math.round(cnt.v) + '%'; }
+    });
+    quizTimer(() => document.getElementById('qz-again').focus({ preventScroll: true }), 1300);
+  } else {
+    qzVrowsEl.querySelectorAll('.qz-vbar span').forEach(el => { el.style.width = el.dataset.w + '%'; });
+    qzIdxValEl.textContent = autoIdx + '%';
+    document.getElementById('qz-index-fill').style.width = autoIdx + '%';
+  }
+}
+
+/* --- Вход / выход / заново --- */
+function openQuiz(){
+  if (entering || quizOpen) return;
+  entering = true;
+  Sound.blip();
+  hideCard();
+  killWorldST();
+  hideIntroNow();
+  quizLock = false;
+  const reveal = () => {
+    worldScreen.hidden = true; worldScreen.style.opacity = '';
+    mapScreen.hidden = true; mapScreen.style.opacity = '';
+    introActive = false;
+    quizOpen = true;
+    quizAnswers = [];
+    quizScreen.hidden = false;
+    buildDots();
+    renderQuestion(0);
+    showQuizView(qzView, false);
+    setAmbient(0.2, 0.24, 1.08, 2);
+    if (HAS_GSAP && !REDUCED){
+      gsap.fromTo(quizScreen, { opacity: 0 }, { opacity: 1, duration: .55, ease: 'power2.out', onComplete: () => { entering = false; } });
+      gsap.fromTo('.qz-head > *', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: .7, stagger: .08, delay: .12, ease: 'power3.out' });
+      gsap.fromTo('#qz-view > *', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .6, stagger: .07, delay: .34, ease: 'power2.out' });
+      quizTimer(() => {
+        const f = qzOptionsEl.querySelector('.qz-opt');
+        if (f) f.focus({ preventScroll: true });
+      }, 1000);
+    } else {
+      entering = false;
+    }
+  };
+  const cur = !worldScreen.hidden ? worldScreen : (!mapScreen.hidden ? mapScreen : null);
+  if (HAS_GSAP && !REDUCED && cur){
+    gsap.to(cur, { opacity: 0, duration: .4, ease: 'power2.in', onComplete: () => { cur.style.opacity = ''; reveal(); } });
+  } else {
+    reveal();
+  }
+}
+
+function closeQuiz(){
+  if (entering || !quizOpen) return;
+  entering = true;
+  Sound.blip();
+  clearQuizTimers();
+  quizOpen = false;
+  const after = () => {
+    quizScreen.hidden = true; quizScreen.style.opacity = '';
+    showMap(false);                                  // возврат всегда на карту
+  };
+  if (HAS_GSAP && !REDUCED){
+    gsap.to(quizScreen, { opacity: 0, duration: .45, ease: 'power2.in', onComplete: after });
+  } else {
+    after();
+  }
+}
+
+function restartQuiz(){
+  if (quizLock || !quizOpen) return;
+  Sound.blip();
+  clearQuizTimers();
+  quizLock = true;
+  quizAnswers = [];
+  buildDots();
+  quizScroll.scrollTop = 0;
+  swapTo(qzView, () => { renderQuestion(0); entranceQuestion(); quizLock = false; });
+}
+
+document.getElementById('map-quiz').addEventListener('click', openQuiz);
+document.getElementById('world-quiz').addEventListener('click', openQuiz);
+document.getElementById('qz-back').addEventListener('click', closeQuiz);
+document.getElementById('qz-again').addEventListener('click', restartQuiz);
+document.getElementById('qz-skip').addEventListener('click', () => { clearQuizTimers(); showResult(); });
 
 /* ------------------------------------------------------------
    ИНИЦИАЛИЗАЦИЯ
@@ -1830,13 +2481,15 @@ requestAnimationFrame(loop);
 requestAnimationFrame(tickPre);
 
 /* ------------------------------------------------------------
-   ТОЧКИ РАСШИРЕНИЯ · ЧАСТИ 3–4
-   Часть 3 (тест): 8 вопросов по одному на экран, прогресс-бар,
-     анимация «анализа», результат-философ. Точка входа — футер
-     мира (.ws-foot): добавить кнопку «Пройти тест» → showQuiz().
-   Часть 4 (финал): «Алгоритм предлагает. Выбираешь — ты».
-   Скролл внутри миров — нативный (#world-scroll); ScrollTrigger
-     уже слушает его (пример — reveal .ws-reveal в showWorld).
+   ТОЧКИ РАСШИРЕНИЯ · ЧАСТЬ 4
+   Финал: «Алгоритм предлагает. Выбираешь — ты» — финальный
+     экран-манифест (после теста и карты): тезисы, шкала
+     «алгоритм ⇄ ты», финальная фраза слогана.
+   Точки входа: результат теста (кнопку «← К карте» можно
+     заменить/дополнить «К финалу»), футер мира, подвал карты.
+   Скролл внутри миров/теста — нативный (#world-scroll,
+   #quiz-scroll); ScrollTrigger уже настроен (пример —
+   reveal .ws-reveal в showWorld).
    ------------------------------------------------------------ */
 </script>
 </body>

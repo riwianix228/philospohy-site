@@ -1,0 +1,1844 @@
+     1→<!DOCTYPE html>
+     2→<html lang="ru">
+     3→<head>
+     4→<meta charset="UTF-8">
+     5→<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+     6→<meta name="theme-color" content="#0a0a0f">
+     7→<title>Философия в эпоху алгоритмов — карта великих идей</title>
+     8→<meta name="description" content="Интерактивное путешествие по великим идеям философии. Сквозной вопрос: кто принимает твои решения — ты или алгоритм?">
+     9→
+    10→<!-- ============================================================
+    11→  ФИЛОСОФИЯ В ЭПОХУ АЛГОРИТМОВ
+    12→  Часть 0 · прелоадер + интро  |  Часть 1 · карта идей (SVG-граф)
+    13→  Часть 2 · миры философов ×6  |  Части 3–4 · тест + финал (далее)
+    14→  ------------------------------------------------------------
+    15→  Структура файла:
+    16→    1. Шрифты (Inter — интерфейс, Cormorant — заголовки/цитаты)
+    17→    2. GSAP + ScrollTrigger через CDN (скролл используется только
+    18→       внутри миров — нативный контейнер, Lenis не нужен)
+    19→    3. CSS: переменные → курсор → прелоадер → сцена → интро
+    20→       → звук → карта → мир философа → адаптив → reduced-motion
+    21→    4. JS: конфиг → утилиты → canvas-мир (частицы/узлы/камера)
+    22→       → прелоадер → типографика → звук → курсор → GSAP-сцены
+    23→       → карта → мир философа (портреты line-art, ScrollTrigger)
+    24→  Части 3–4 (тест, финал) подключаются в точках расширения —
+    25→  ищите комментарий "ТОЧКИ РАСШИРЕНИЯ".
+    26→============================================================ -->
+    27→
+    28→<!-- Шрифты Google Fonts -->
+    29→<link rel="preconnect" href="https://fonts.googleapis.com">
+    30→<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    31→<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    32→
+    33→<!-- GSAP: ядро + ScrollTrigger (нужен с части 1 для скролл-анимаций) -->
+    34→<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    35→<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+    36→<!-- Lenis (плавный скролл) НЕ нужен: скролл остаётся только внутри
+    37→     миров философов (#world-scroll — нативный контейнер, его слушает
+    38→     ScrollTrigger). Строка оставлена как справка.
+    39→<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script> -->
+    40→
+    41→<style>
+    42→/* ==========================================================
+    43→   0. ПЕРЕМЕННЫЕ И СБРОС
+    44→   ========================================================== */
+    45→:root{
+    46→  --bg:      #0a0a0f;                 /* фон вселенной */
+    47→  --ink:     #EDEDF2;                 /* основной текст */
+    48→  --dim:     rgba(237,237,242,.55);   /* приглушённый текст */
+    49→  --accent:  #9B7EDE;                 /* неоновый фиолетовый (Кант) */
+    50→  --gold:    #E8B84B;                 /* тёплый акцент (Сократ) */
+    51→  --sans:    'Inter', system-ui, -apple-system, sans-serif;
+    52→  --serif:   'Cormorant', Georgia, serif;
+    53→  --safe-t:  env(safe-area-inset-top, 0px);
+    54→  --safe-b:  env(safe-area-inset-bottom, 0px);
+    55→}
+    56→*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0 }
+    57→html,body{ height:100% }
+    58→body{
+    59→  background:var(--bg);
+    60→  color:var(--ink);
+    61→  font-family:var(--sans);
+    62→  overflow:hidden;                /* часть 0 — один экран; часть 1 включит скролл */
+    63→  -webkit-font-smoothing:antialiased;
+    64→}
+    65→::selection{ background:rgba(155,126,222,.35); color:#fff }
+    66→button{ font-family:inherit; touch-action:manipulation }
+    67→:focus-visible{ outline:1px solid var(--accent); outline-offset:4px; border-radius:4px }
+    68→
+    69→/* ==========================================================
+    70→   1. КАСТОМНЫЙ КУРСОР (только десктоп, pointer:fine)
+    71→   ========================================================== */
+    72→html.has-cursor, html.has-cursor *{ cursor:none !important }
+    73→#cursor-dot,#cursor-ring{
+    74→  position:fixed; top:0; left:0; z-index:120;
+    75→  pointer-events:none; border-radius:50%; opacity:0;
+    76→}
+    77→#cursor-dot{ width:6px; height:6px; background:var(--ink); box-shadow:0 0 12px rgba(237,237,242,.8) }
+    78→#cursor-ring{
+    79→  width:36px; height:36px; border:1px solid rgba(237,237,242,.35);
+    80→  transition:opacity .3s, width .25s ease, height .25s ease,
+    81→             border-color .25s, background .25s, box-shadow .25s;
+    82→}
+    83→#cursor-ring.is-hover{
+    84→  width:58px; height:58px;
+    85→  border-color:rgba(155,126,222,.9);
+    86→  background:rgba(155,126,222,.07);
+    87→  box-shadow:0 0 26px rgba(155,126,222,.22);
+    88→}
+    89→#cursor-ring.is-down{ width:26px; height:26px }
+    90→html.cursor-on #cursor-dot, html.cursor-on #cursor-ring{ opacity:1 }
+    91→
+    92→/* ==========================================================
+    93→   2. ПРЕЛОАДЕР
+    94→   ========================================================== */
+    95→#preloader{
+    96→  position:fixed; inset:0; z-index:100; background:var(--bg);
+    97→  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px;
+    98→  transition:opacity .65s ease, visibility 0s linear .65s;
+    99→}
+   100→#preloader.done{ opacity:0; visibility:hidden }
+   101→.pre-node{
+   102→  width:10px; height:10px; border-radius:50%;
+   103→  background:var(--accent);
+   104→  box-shadow:0 0 18px var(--accent), 0 0 52px rgba(155,126,222,.55);
+   105→  animation:prePulse 1.5s ease-in-out infinite;
+   106→}
+   107→@keyframes prePulse{
+   108→  0%,100%{ transform:scale(1); opacity:.65 }
+   109→  50%    { transform:scale(1.9); opacity:1 }
+   110→}
+   111→.pre-counter{
+   112→  font:300 12px/1 var(--sans); letter-spacing:.4em; text-indent:.4em;
+   113→  color:var(--dim); font-variant-numeric:tabular-nums;
+   114→}
+   115→.pre-line{ width:180px; height:1px; background:rgba(237,237,242,.12); overflow:hidden }
+   116→.pre-line span{
+   117→  display:block; height:100%; transform:scaleX(0); transform-origin:left;
+   118→  background:linear-gradient(90deg, var(--accent), var(--gold));
+   119→}
+   120→
+   121→/* ==========================================================
+   122→   3. СЦЕНА И ХОЛСТ
+   123→   ========================================================== */
+   124→#scene{ position:fixed; inset:0; overflow:hidden; background:var(--bg) }
+   125→#cosmos{ position:absolute; inset:0; display:block; width:100%; height:100% }
+   126→
+   127→/* Вспышка zoom-перехода (цвет подставляется из JS под узел философа) */
+   128→#flash{
+   129→  position:fixed; inset:0; z-index:30; pointer-events:none; opacity:0;
+   130→  transition:opacity .2s linear;
+   131→}
+   132→/* 3D-сетка «горизонт» — отдельный холст, рисуется только во время влёта
+   133→   в узел (startGrid3d/stopGrid3d); когда неактивна — холст прозрачный */
+   134→#grid3d{
+   135→  position:fixed; inset:0; z-index:25; pointer-events:none;
+   136→}
+   137→
+   138→/* ==========================================================
+   139→   4. ЭКРАН 0 · ИНТРО
+   140→   ========================================================== */
+   141→#intro{
+   142→  position:absolute; inset:0; z-index:10;
+   143→  display:flex; flex-direction:column; align-items:center; justify-content:center;
+   144→  text-align:center; padding:0 20px;
+   145→  pointer-events:none;             /* клики проходят к canvas (узлы) */
+   146→}
+   147→/* надзаголовок */
+   148→.overtitle{
+   149→  display:flex; align-items:center; gap:18px; margin-bottom:36px;
+   150→  font:500 11px/1 var(--sans); letter-spacing:.42em; text-indent:.42em;
+   151→  text-transform:uppercase; color:var(--dim); opacity:0;
+   152→}
+   153→.overtitle .line{
+   154→  width:56px; height:1px; display:inline-block; transform-origin:right center;
+   155→  background:linear-gradient(90deg, transparent, rgba(237,237,242,.4));
+   156→}
+   157→.overtitle .line:last-child{
+   158→  transform-origin:left center;
+   159→  background:linear-gradient(90deg, rgba(237,237,242,.4), transparent);
+   160→}
+   161→/* заголовок */
+   162→#title{
+   163→  font:500 clamp(44px, 7.2vw, 108px)/1.06 var(--serif);
+   164→  letter-spacing:.01em; color:var(--ink);
+   165→  text-shadow:0 0 70px rgba(155,126,222,.28);
+   166→  margin-bottom:30px;
+   167→}
+   168→#title .word{ display:inline-block; white-space:nowrap }
+   169→#title .ch{ display:inline-block; will-change:transform,opacity }
+   170→/* слово «алгоритмов» — неоновый градиент */
+   171→#title .accent{
+   172→  background:linear-gradient(94deg, #9B7EDE 15%, #E5484D 90%);
+   173→  -webkit-background-clip:text; background-clip:text; color:transparent;
+   174→  text-shadow:none;
+   175→}
+   176→/* слоган с эффектом печати */
+   177→#slogan{
+   178→  font:400 clamp(15px, 1.8vw, 20px)/1.7 var(--sans);
+   179→  letter-spacing:.02em; color:var(--dim);
+   180→  min-height:1.7em; margin-bottom:44px;
+   181→}
+   182→#slogan .caret{
+   183→  display:inline-block; width:2px; height:1.12em; margin-left:3px;
+   184→  vertical-align:-.18em; background:var(--gold);
+   185→  box-shadow:0 0 10px rgba(232,184,75,.9); opacity:0;
+   186→}
+   187→body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
+   188→@keyframes caret{ 0%,49%{opacity:1} 50%,100%{opacity:0} }
+   189→/* кнопка входа */
+   190→#enter-btn{
+   191→  pointer-events:auto; position:relative;
+   192→  appearance:none; background:rgba(155,126,222,.06);
+   193→  border:1px solid rgba(155,126,222,.55); border-radius:999px;
+   194→  color:var(--ink); font:500 12px/1 var(--sans);
+   195→  letter-spacing:.32em; text-indent:.32em; text-transform:uppercase;
+   196→  padding:21px 40px;
+   197→  opacity:0; transform:translateY(26px);
+   198→  transition:background .35s, border-color .35s, box-shadow .35s, color .35s;
+   199→}
+   200→#enter-btn:hover{
+   201→  background:rgba(155,126,222,.15);
+   202→  border-color:rgba(200,180,255,.95);
+   203→  box-shadow:0 0 36px rgba(155,126,222,.4), inset 0 0 18px rgba(155,126,222,.12);
+   204→}
+   205→#enter-btn .arr{ display:inline-block; margin-left:4px; transition:transform .35s }
+   206→#enter-btn:hover .arr{ transform:translateX(6px) }
+   207→#enter-btn .glow{
+   208→  position:absolute; inset:-1px; border-radius:inherit; pointer-events:none;
+   209→  box-shadow:0 0 26px rgba(155,126,222,.45); opacity:.2;
+   210→  animation:btnGlow 2.8s ease-in-out infinite;
+   211→}
+   212→@keyframes btnGlow{ 0%,100%{opacity:.12} 50%{opacity:.55} }
+   213→/* подсказка внизу */
+   214→#hint{
+   215→  position:absolute; left:0; right:0; bottom:calc(30px + var(--safe-b));
+   216→  font:300 11px/1.6 var(--sans); letter-spacing:.22em; text-indent:.22em;
+   217→  text-transform:uppercase; color:rgba(237,237,242,.35);
+   218→  opacity:0; padding:0 24px;
+   219→}
+   220→
+   221→/* ==========================================================
+   222→   5. КНОПКА ЗВУКА
+   223→   ========================================================== */
+   224→#mute-btn{
+   225→  position:fixed; top:calc(20px + var(--safe-t)); right:20px; z-index:40;
+   226→  width:46px; height:46px; border-radius:50%;
+   227→  display:flex; align-items:center; justify-content:center;
+   228→  border:1px solid rgba(237,237,242,.16);
+   229→  background:rgba(10,10,15,.55); backdrop-filter:blur(8px);
+   230→  color:var(--dim); opacity:0;
+   231→  transition:color .3s, border-color .3s, box-shadow .3s;
+   232→}
+   233→#mute-btn:hover{ color:var(--ink); border-color:rgba(155,126,222,.65); box-shadow:0 0 20px rgba(155,126,222,.25) }
+   234→#mute-btn .on{ display:none }
+   235→#mute-btn.unmuted .on{ display:block }
+   236→#mute-btn.unmuted .off{ display:none }
+   237→
+   238→/* ==========================================================
+   239→   6. ЭКРАН 1 · КАРТА ВЕЛИКИХ ИДЕЙ (SVG-граф) — ЧАСТЬ 1
+   240→   ========================================================== */
+   241→#map-screen{ position:absolute; inset:0; z-index:20; display:flex; flex-direction:column }
+   242→#map-screen[hidden]{ display:none }
+   243→.map-head{ text-align:center; padding:clamp(44px, 7vh, 76px) 24px 0 }
+   244→.kicker{
+   245→  font:500 11px/1 var(--sans); letter-spacing:.4em; text-indent:.4em;
+   246→  text-transform:uppercase; color:var(--gold);
+   247→}
+   248→.map-title{
+   249→  font:500 clamp(28px, 3.6vw, 52px)/1.15 var(--serif);
+   250→  color:var(--ink); margin:14px 0 10px;
+   251→}
+   252→.map-sub{ font:300 clamp(12.5px, 1.4vw, 15px)/1.6 var(--sans); color:var(--dim); letter-spacing:.04em }
+   253→#map-wrap{ position:relative; flex:1; min-height:0; width:min(1200px, 100%); margin:0 auto }
+   254→#map-svg{ position:absolute; inset:0; width:100%; height:100% }
+   255→/* узел графа */
+   256→.map-node{ cursor:pointer; outline:none }
+   257→.map-node .node-glow{ opacity:.72 }
+   258→.map-node.hot .node-glow{ opacity:1 }
+   259→.node-label{
+   260→  fill:rgba(237,237,242,.62); font:500 13px var(--sans);
+   261→  letter-spacing:.16em; text-anchor:middle;
+   262→  transition:fill .3s;
+   263→}
+   264→.map-node.hot .node-label, .map-node:focus-visible .node-label{ fill:var(--c) }
+   265→.node-ring{ transition:stroke-width .3s }
+   266→.map-node.hot .node-ring, .map-node:focus-visible .node-ring{ stroke-width:2.2 }
+   267→@keyframes glowPulse{ 0%,100%{opacity:.55} 50%{opacity:1} }
+   268→/* мини-карточка узла (наполняется и позиционируется в JS) */
+   269→#map-card{
+   270→  position:absolute; z-index:5; width:min(254px, 74vw); opacity:0; pointer-events:none;
+   271→  padding:16px 18px 14px; border-radius:14px;
+   272→  background:rgba(12,12,20,.86); border:1px solid var(--cc, rgba(237,237,242,.35));
+   273→  backdrop-filter:blur(10px); box-shadow:0 14px 40px rgba(0,0,0,.5);
+   274→}
+   275→.mc-name{ font:500 24px/1.1 var(--serif); color:var(--ink) }
+   276→.mc-years{ font:400 10.5px/1 var(--sans); letter-spacing:.14em; color:var(--dim); margin:7px 0 10px }
+   277→.mc-idea{ font:300 12.5px/1.65 var(--sans); color:rgba(237,237,242,.72) }
+   278→.mc-go{ font:500 9.5px/1 var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--cc); margin-top:12px }
+   279→#map-hint{
+   280→  text-align:center; padding:0 24px calc(18px + var(--safe-b));
+   281→  font:300 11px/1.6 var(--sans); letter-spacing:.22em; text-indent:.22em;
+   282→  text-transform:uppercase; color:rgba(237,237,242,.35);
+   283→}
+   284→.ghost-btn{
+   285→  appearance:none; background:transparent; border:1px solid rgba(237,237,242,.22);
+   286→  border-radius:999px; color:var(--dim); padding:13px 22px;
+   287→  font:500 10.5px/1 var(--sans); letter-spacing:.24em; text-indent:.24em; text-transform:uppercase;
+   288→  transition:color .3s, border-color .3s, background .3s;
+   289→}
+   290→.ghost-btn:hover{ color:var(--ink); border-color:rgba(237,237,242,.55); background:rgba(237,237,242,.05) }
+   291→#map-back{ position:absolute; top:calc(18px + var(--safe-t)); left:20px }
+   292→
+   293→/* ==========================================================
+   294→   7. ЭКРАН 2 · МИР ФИЛОСОФА (шаблон ×6) — ЧАСТЬ 2
+   295→   Цвет философа и производные ставит JS (mountWorld):
+   296→   --wc (цвет), --wc-line (линии/рамки), --wc-bg (подложки)
+   297→   ========================================================== */
+   298→#world-screen{
+   299→  position:absolute; inset:0; z-index:22;
+   300→  --wc: var(--gold);
+   301→  --wc-line: rgba(232,184,75,.30);
+   302→  --wc-bg:  rgba(232,184,75,.10);
+   303→}
+   304→#world-screen[hidden]{ display:none }
+   305→/* внутренний скролл: мир может быть выше экрана (нативный скролл,
+   306→   ScrollTrigger слушает именно этот контейнер) */
+   307→#world-scroll{
+   308→  position:absolute; inset:0; overflow-y:auto;
+   309→  overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+   310→  scrollbar-width:thin; scrollbar-color:rgba(237,237,242,.16) transparent;
+   311→}
+   312→#world-scroll::-webkit-scrollbar{ width:8px }
+   313→#world-scroll::-webkit-scrollbar-track{ background:transparent }
+   314→#world-scroll::-webkit-scrollbar-thumb{ background:rgba(237,237,242,.14); border-radius:99px }
+   315→#world-scroll::-webkit-scrollbar-thumb:hover{ background:rgba(237,237,242,.28) }
+   316→/* линия чтения — глубина погружения в мир */
+   317→#world-progress{
+   318→  position:absolute; top:0; left:0; right:0; height:2px; z-index:6;
+   319→  transform:scaleX(0); transform-origin:left; pointer-events:none;
+   320→  background:linear-gradient(90deg, var(--wc-line), var(--wc));
+   321→  box-shadow:0 0 14px var(--wc);
+   322→}
+   323→.ws-inner{
+   324→  width:min(760px, 100%); margin:0 auto;
+   325→  padding:clamp(96px, 13vh, 150px) 24px calc(76px + var(--safe-b));
+   326→  display:flex; flex-direction:column; align-items:center; text-align:center;
+   327→}
+   328→.ws-kicker{ color:var(--wc); margin-bottom:26px }
+   329→/* --- портрет line-art (рисуется в JS из PORTRAIT_ART) --- */
+   330→.ws-portrait{ width:clamp(168px, 23vh, 228px); margin-bottom:12px; filter:drop-shadow(0 0 26px var(--wc-line)) }
+   331→.ws-portrait svg{ display:block; width:100%; height:auto; overflow:visible }
+   332→.ws-orbit{ transform-box:view-box; transform-origin:75px 88px; animation:orbitSpin 18s linear infinite }
+   333→@keyframes orbitSpin{ to{ transform:rotate(360deg) } }
+   334→.ws-epithet{
+   335→  font:400 11px/1 var(--sans); letter-spacing:.34em; text-indent:.34em;
+   336→  text-transform:uppercase; color:var(--dim); margin-top:14px; margin-bottom:16px;
+   337→}
+   338→.w-name{
+   339→  font:500 clamp(40px, 6vw, 78px)/1.06 var(--serif); color:var(--ink);
+   340→  text-shadow:0 0 64px var(--wc-line);
+   341→}
+   342→.w-name .word{ display:inline-block; white-space:nowrap }
+   343→.w-name .ch{ display:inline-block; will-change:transform,opacity }
+   344→.w-years{
+   345→  font:400 11.5px/1.8 var(--sans); letter-spacing:.3em; text-indent:.3em;
+   346→  color:var(--dim); margin-top:14px;
+   347→}
+   348→/* --- секции мира --- */
+   349→.ws-sec{ width:100%; margin-top:clamp(40px, 6.5vh, 66px); text-align:left }
+   350→.ws-label{
+   351→  display:flex; align-items:center; gap:14px;
+   352→  font:500 11px/1.3 var(--sans); letter-spacing:.28em; text-indent:.28em;
+   353→  text-transform:uppercase; color:var(--wc);
+   354→}
+   355→.ws-label::after{ content:''; flex:1; height:1px; background:linear-gradient(90deg, var(--wc-line), transparent) }
+   356→.ws-idea-text{
+   357→  margin-top:20px;
+   358→  font:300 clamp(14.5px, 1.65vw, 17px)/1.85 var(--sans);
+   359→  color:rgba(237,237,242,.8);
+   360→}
+   361→/* цитата (кавычки «…» уже внутри текста — декоративная марка не нужна) */
+   362→.ws-quote-sec{ text-align:center }
+   363→.w-quote{
+   364→  font:italic 500 clamp(21px, 2.9vw, 33px)/1.4 var(--serif);
+   365→  color:var(--wc); text-shadow:0 0 44px var(--wc-line);
+   366→}
+   367→.ws-quote-src{
+   368→  margin-top:16px; font:400 11px/1 var(--sans);
+   369→  letter-spacing:.22em; text-indent:.22em; text-transform:uppercase; color:var(--dim);
+   370→}
+   371→/* блок «А что бы он сказал про алгоритмы?» */
+   372→.ws-algo-card{
+   373→  margin-top:20px; position:relative; overflow:hidden;
+   374→  border:1px solid var(--wc-line); border-radius:18px;
+   375→  padding:clamp(20px, 3.2vw, 30px);
+   376→  background:linear-gradient(180deg, var(--wc-bg), rgba(10,10,15,.5));
+   377→  backdrop-filter:blur(6px);
+   378→}
+   379→.ws-algo-card::before{
+   380→  content:''; position:absolute; top:0; left:8%; right:8%; height:1px;
+   381→  background:linear-gradient(90deg, transparent, var(--wc), transparent); opacity:.7;
+   382→}
+   383→.ws-algo-text{ font:300 clamp(13.5px, 1.5vw, 15.5px)/1.85 var(--sans); color:rgba(237,237,242,.85) }
+   384→.ws-algo-q{
+   385→  margin-top:22px; padding-top:18px; border-top:1px dashed var(--wc-line);
+   386→  font:italic 500 clamp(16px, 2vw, 20px)/1.55 var(--serif); color:var(--wc);
+   387→}
+   388→/* низ мира */
+   389→.ws-foot{ display:flex; flex-direction:column; align-items:center; gap:20px; margin-top:clamp(44px, 7vh, 76px); text-align:center }
+   390→.ws-scan{
+   391→  font:300 11px/1.9 var(--sans); letter-spacing:.18em; text-indent:.18em;
+   392→  text-transform:uppercase; color:rgba(237,237,242,.35); max-width:430px;
+   393→}
+   394→
+   395→/* Статичное раскрытие контента (reduced motion или нет GSAP) */
+   396→.reveal-static .overtitle,
+   397→.reveal-static #enter-btn,
+   398→.reveal-static #hint,
+   399→.reveal-static #mute-btn{ opacity:1 }
+   400→.reveal-static #enter-btn{ transform:none }
+   401→
+   402→/* ==========================================================
+   403→   8. АДАПТИВ: 1440 / 1024 / 768 / 640 / 480
+   404→   ========================================================== */
+   405→@media (max-width:1024px){
+   406→  #title{ margin-bottom:26px }
+   407→}
+   408→@media (max-width:768px){
+   409→  .overtitle{ letter-spacing:.3em; text-indent:.3em; gap:12px }
+   410→  .overtitle .line{ width:34px }
+   411→  #enter-btn{ padding:19px 32px }
+   412→  #map-back{ top:calc(14px + var(--safe-t)); left:14px }
+   413→}
+   414→@media (max-width:640px){
+   415→  /* узлы и подписи крупнее в «сжатом» viewBox карты */
+   416→  #map-svg .node-label{ font-size:26px; letter-spacing:.12em }
+   417→  #map-svg .node-ring{ r:32 }
+   418→  #map-svg .node-core{ r:7 }
+   419→  #map-card{ width:212px }
+   420→  .w-name{ font-size:clamp(38px, 11vw, 52px) }
+   421→}
+   422→@media (max-width:480px){
+   423→  .overtitle{ margin-bottom:26px }
+   424→  #title{ margin-bottom:22px }
+   425→  #slogan{ min-height:3.4em; margin-bottom:34px }  /* запас под 2 строки */
+   426→  #enter-btn{ padding:17px 26px; font-size:11px }
+   427→  #mute-btn{ width:42px; height:42px; top:calc(14px + var(--safe-t)); right:14px }
+   428→  #hint{ letter-spacing:.14em }
+   429→  .map-head{ padding-top:56px }
+   430→  .ws-inner{ padding-left:18px; padding-right:18px }
+   431→  .ws-label{ letter-spacing:.16em; text-indent:.16em }
+   432→}
+   433→
+   434→/* ==========================================================
+   435→   9. ДОСТУПНОСТЬ: prefers-reduced-motion
+   436→   ========================================================== */
+   437→@media (prefers-reduced-motion: reduce){
+   438→  *,*::before,*::after{
+   439→    animation-duration:.001s !important;
+   440→    animation-iteration-count:1 !important;
+   441→    transition-duration:.15s !important;
+   442→  }
+   443→}
+   444→</style>
+   445→</head>
+   446→<body>
+   447→<noscript>
+   448→  <p style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#EDEDF2;font-family:sans-serif;text-align:center;padding:24px">
+   449→    Для путешествия по карте великих идей необходим JavaScript.
+   450→  </p>
+   451→</noscript>
+   452→
+   453→<!-- ПРЕЛОАДЕР -->
+   454→<div id="preloader" role="status" aria-label="Загрузка">
+   455→  <div class="pre-node" aria-hidden="true"></div>
+   456→  <div class="pre-counter">0%</div>
+   457→  <div class="pre-line" aria-hidden="true"><span></span></div>
+   458→</div>
+   459→
+   460→<!-- КНОПКА ЗВУКА -->
+   461→<button id="mute-btn" data-hover aria-label="Включить или выключить звук" aria-pressed="false">
+   462→  <!-- звук выключен -->
+   463→  <svg class="off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+   464→    <path d="M11 5 6 9H2v6h4l5 4V5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>
+   465→  </svg>
+   466→  <!-- звук включён -->
+   467→  <svg class="on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+   468→    <path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9.4 9.4 0 0 1 0 13"/>
+   469→  </svg>
+   470→</button>
+   471→
+   472→<main id="scene">
+   473→  <!-- Холст: частицы, узлы, связи, звёзды (всё рисуется здесь) -->
+   474→  <canvas id="cosmos" aria-hidden="true"></canvas>
+   475→
+   476→  <!-- ЭКРАН 0 · ИНТРО -->
+   477→  <section id="intro">
+   478→    <div class="overtitle">
+   479→      <span class="line" aria-hidden="true"></span>
+   480→      <span>Карта великих идей</span>
+   481→      <span class="line" aria-hidden="true"></span>
+   482→    </div>
+   483→    <h1 id="title" aria-label="Философия в эпоху алгоритмов"></h1>
+   484→    <p id="slogan" aria-label="Алгоритм уже знает, что ты выберешь. А ты?">
+   485→      <span id="slogan-text" aria-hidden="true"></span><span class="caret" aria-hidden="true"></span>
+   486→    </p>
+   487→    <button id="enter-btn" data-hover>Войти в карту<span class="arr" aria-hidden="true">&nbsp;→</span><span class="glow" aria-hidden="true"></span></button>
+   488→    <p id="hint">Войдите в карту — или кликните по узлу</p>
+   489→  </section>
+   490→
+   491→  <!-- ЭКРАН 1 · КАРТА ВЕЛИКИХ ИДЕЙ (SVG-граф строится в JS из PHILOSOPHERS + EDGES) -->
+   492→  <section id="map-screen" hidden aria-label="Карта великих идей">
+   493→    <header class="map-head">
+   494→      <div class="kicker">Часть 1 · Карта великих идей</div>
+   495→      <h2 class="map-title">Шесть голосов — один вопрос</h2>
+   496→      <p class="map-sub">Кто принимает твои решения — ты или алгоритм?</p>
+   497→    </header>
+   498→    <div id="map-wrap">
+   499→      <svg id="map-svg" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Граф связей шести философов"></svg>
+   500→      <!-- мини-карточка узла: наполняется и позиционируется в JS -->
+   501→      <div id="map-card" aria-hidden="true">
+   502→        <div class="mc-name"></div>
+   503→        <div class="mc-years"></div>
+   504→        <div class="mc-idea"></div>
+   505→        <div class="mc-go">клик — войти в мир →</div>
+   506→      </div>
+   507→    </div>
+   508→    <p id="map-hint">Наведите на узел — клик откроет мир</p>
+   509→    <button id="map-back" class="ghost-btn" data-hover>← Интро</button>
+   510→  </section>
+   511→
+   512→  <!--
+   513→    ЭКРАН 2 · МИР ФИЛОСОФА (шаблон ×6) — ЧАСТЬ 2
+   514→    Шаблон один — данные подставляет mountWorld(p, idx) из PHILOSOPHERS:
+   515→    портрет (SVG line-art), имя, идея, цитата, блок «А что бы он сказал
+   516→    про алгоритмы?». Кнопка возврата — только в футере (работает и
+   517→    Escape); верхний левый угол мира оставлен чистым.
+   518→  -->
+   519→  <section id="world-screen" hidden aria-label="Мир философа">
+   520→    <div id="world-progress" aria-hidden="true"></div>
+   521→    <div id="world-scroll">
+   522→      <div class="ws-inner">
+   523→        <div class="kicker ws-kicker">Мир философа · <span id="w-idx">01 / 06</span></div>
+   524→        <div class="ws-portrait" id="w-portrait"></div>
+   525→        <h2 class="w-name" id="w-name"></h2>
+   526→        <div class="ws-epithet" id="w-epithet"></div>
+   527→        <div class="w-years" id="w-years"></div>
+   528→
+   529→        <section class="ws-sec ws-reveal" aria-label="Главная идея">
+   530→          <h3 class="ws-label">Главная идея</h3>
+   531→          <p class="ws-idea-text" id="w-idea"></p>
+   532→        </section>
+   533→
+   534→        <section class="ws-sec ws-quote-sec ws-reveal" aria-label="Цитата">
+   535→          <blockquote class="w-quote" id="w-quote"></blockquote>
+   536→          <div class="ws-quote-src" id="w-quote-src"></div>
+   537→        </section>
+   538→
+   539→        <section class="ws-sec ws-reveal" aria-label="А что бы он сказал про алгоритмы">
+   540→          <h3 class="ws-label">А что бы он сказал про алгоритмы?</h3>
+   541→          <div class="ws-algo-card">
+   542→            <p class="ws-algo-text" id="w-algo"></p>
+   543→            <p class="ws-algo-q" id="w-question"></p>
+   544→          </div>
+   545→        </section>
+   546→
+   547→        <footer class="ws-foot ws-reveal">
+   548→          <button id="world-back2" class="ghost-btn" data-hover>← К карте</button>
+   549→          <p class="ws-scan">кто принимает твои решения — ты или алгоритм?</p>
+   550→        </footer>
+   551→      </div>
+   552→    </div>
+   553→  </section>
+   554→</main>
+   555→
+   556→<!-- Вспышка zoom-перехода -->
+   557→<div id="flash" aria-hidden="true"></div>
+   558→
+   559→<!-- 3D-сетка «горизонт» (рисуется только во время влёта в узел) -->
+   560→<canvas id="grid3d" aria-hidden="true"></canvas>
+   561→
+   562→<!-- Кастомный курсор -->
+   563→<div id="cursor-dot" aria-hidden="true"></div>
+   564→<div id="cursor-ring" aria-hidden="true"></div>
+   565→
+   566→<script>
+   567→'use strict';
+   568→/* ============================================================
+   569→   JS · ЧАСТИ 0–2
+   570→   Разделы:
+   571→     1. Конфиг и утилиты
+   572→     2. Canvas-мир: частицы, узлы, связи, звёзды, камера
+   573→     3. Прелоадер
+   574→     4. Типографика (заголовок по буквам, печатная машинка)
+   575→     5. Звук (Web Audio, без внешних файлов)
+   576→     6. Кастомный курсор
+   577→     7. GSAP-сцены: интро → zoom-переход
+   578→     8. Экран 1 · карта (SVG-граф) и навигация
+   579→     9. Экран 2 · мир философа: портрет-созвездие, контент,
+   580→        скролл-анимации (ScrollTrigger)
+   581→   ============================================================ */
+   582→
+   583→/* ------------------------------------------------------------
+   584→   1. КОНФИГ И УТИЛИТЫ
+   585→   ------------------------------------------------------------ */
+   586→const TITLE  = 'Философия в эпоху алгоритмов';
+   587→const SLOGAN = 'Алгоритм уже знает, что ты выберешь. А ты?';
+   588→
+   589→// Шесть философов — единый источник данных сайта:
+   590→//   x, y           — узлы на canvas-интро (доли экрана 0..1)
+   591→//   mx, my         — узлы на SVG-карте (viewBox 1200×700)
+   592→//   idea           — короткая идея (мини-карточка на карте)
+   593→//   ideaFull       — развёрнутая идея (мир философа, часть 2)
+   594→//   quote/quoteSrc — цитата и источник
+   595→//   epithet        — подпись под портретом
+   596→//   algo/question  — блок «А что бы он сказал про алгоритмы?»
+   597→//                    и сквозной мини-вопрос мира
+   598→const PHILOSOPHERS = [
+   599→  {
+   600→    id:'socrates', name:'Сократ', color:'#E8B84B', x:0.16, y:0.32, mx:300, my:250,
+   601→    years:'ок. 470 — 399 до н. э.', epithet:'Афины · майевтика',
+   602→    idea:'Истина рождается из вопроса. Сомневайся — и думай сам.',
+   603→    ideaFull:'Сократ ничего не написал и не дал ни одного ответа — только вопросы. Его майевтика — «повивальное искусство» мысли: расшатать привычные уверенности собеседника, чтобы истина родилась у него самого, а не была вручена готовой.',
+   604→    quote:'Я знаю, что ничего не знаю', quoteSrc:'Платон · «Апология Сократа»',
+   605→    algo:'Каждую рекомендацию он превратил бы в собеседника и завалил бы вопросами: «Почему ты решил, что мне это понравится? Кто сказал, что я это люблю? А я сам это проверял?». Алгоритм, который никогда не сомневается, для него не мудр — просто болтлив. Знать, по Сократу, — значит уметь ответить, почему; лента не умеет отвечать — она умеет показывать.',
+   606→    question:'Ты задаёшь вопросы своей ленте — или она задаёт вопросы тебе?'
+   607→  },
+   608→  {
+   609→    id:'descartes', name:'Декарт', color:'#6FA8DC', x:0.50, y:0.14, mx:620, my:150,
+   610→    years:'1596 — 1650', epithet:'Нидерланды · метод сомнения',
+   611→    idea:'Сомнение — метод: отбрось всё, кроме очевидного.',
+   612→    ideaFull:'Сомнение у Декарта — не слабость, а инструмент: отбрось всё, в чём можно усомниться, — привычки, авторитеты, показания чувств, — пока не останется единственное несомненное. Сам акт сомнения и есть мышление; из него, как из первой точки, заново выстраивается вся картина мира.',
+   613→    quote:'Мыслю — следовательно, существую', quoteSrc:'«Рассуждение о методе»',
+   614→    algo:'Он усомнился бы и в алгоритме — и нашёл бы в нём одно несомненное: того, кто проверяет. Пока ты способен отличить свой выбор от предложенного, ты существуешь как мыслящий. Опасна не машина — опасно перестать сомневаться и принять первые строки выдачи за истину. Правило метода простое: считать истинным лишь то, что проверил ты сам.',
+   615→    question:'Что из увиденного сегодня ты проверил сам?'
+   616→  },
+   617→  {
+   618→    id:'kant', name:'Кант', color:'#9B7EDE', x:0.85, y:0.38, mx:950, my:300,
+   619→    years:'1724 — 1804', epithet:'Кёнигсберг · критика разума',
+   620→    idea:'Поступай так, чтобы твоё правило могло стать всеобщим законом.',
+   621→    ideaFull:'Не разум подстраивается под мир — мир подстраивается под формы разума. А в нравственности всё решает мотив: поступок свободен, только если его правило ты готов сделать всеобщим законом. Свобода — не «делай что хочешь», а «давай себе закон сам».',
+   622→    quote:'Имей мужество пользоваться собственным умом', quoteSrc:'«Ответ на вопрос: что такое Просвещение?»',
+   623→    algo:'Кант разделил бы тебя надвое: феномен — данные, которые собирает машина, и ноумен — ты сам, вещь-в-себе, недосягаемая ни для одного датчика. Алгоритм безупречно описывает первое и никогда не увидит второе. Его вопрос был бы жёстче любого аудита: может ли правило твоей ленты стать всеобщим законом? Если все смотрят одно и то же — никто не мыслит.',
+   624→    question:'Твой выбор — твой закон или чужая формула?'
+   625→  },
+   626→  {
+   627→    id:'nietzsche', name:'Ницше', color:'#E5484D', x:0.72, y:0.82, mx:830, my:590,
+   628→    years:'1844 — 1900', epithet:'Сильс-Мария · воля к власти',
+   629→    idea:'Создай свои ценности — вместо того, чтобы носить чужие.',
+   630→    ideaFull:'Ценности не выдаются — они создаются. Воля к власти — не господство над другими, а преодоление себя: собрать из хаоса собственную шкалу и жить по ней. Готовые истины он подозревал в усталости: «так принято» — чаще всего диагноз, а не аргумент.',
+   631→    quote:'Стань тем, кто ты есть', quoteSrc:'«Весёлая наука»',
+   632→    algo:'В ленте он увидел бы новую мораль стада: «так делают все», «это набирает лайки». Он потребовал бы разбить шкалу, по которой тебя мерят, — рейтинги, охваты, скоринги, — как разбивали старые скрижали. Одинаковые рекомендации — не судьба, а стыд: машине выгодно, чтобы все были удобными. Твоя задача — перегрузить формулу собой.',
+   633→    question:'Твои ценности — твои или выданы лентой?'
+   634→  },
+   635→  {
+   636→    id:'marcus', name:'Марк Аврелий', color:'#7FB88A', x:0.14, y:0.78, mx:430, my:620,
+   637→    years:'121 — 180', epithet:'Рим · стоицизм',
+   638→    idea:'Властвуй над тем, что в твоей власти: над своими суждениями.',
+   639→    ideaFull:'Император писал «к самому себе» на военных стоянках: ранит не событие, а суждение о нём. Властвовать имеет смысл только над тем, что тебе подвластно, — над своим суждением, желанием, действием. Всё остальное — чужой ход в общей игре.',
+   640→    quote:'Счастье твоей жизни зависит от качества твоих мыслей', quoteSrc:'«Размышления»',
+   641→    algo:'На ленту он смотрел бы, как на войско: смотри, но не подчиняйся. Возмущение в фиде — не твоё возмущение, пока ты сам не вынес суждение. Стоик отличает сигнал от шума: гнев — от новости, желание — от рекламы. Его утренняя практика звучала бы вполне современно: «сегодня тебя снова будут давить на слабые места — и всё же решение остаётся внутри», там, куда не дотянуться никакому алгоритму.',
+   642→    question:'Что сейчас в твоей власти — а что владеет тобой?'
+   643→  },
+   644→  {
+   645→    id:'sartre', name:'Сартр', color:'#D9885F', x:0.42, y:0.62, mx:640, my:380,
+   646→    years:'1905 — 1980', epithet:'Париж · экзистенциализм',
+   647→    idea:'Ты — сумма твоих выборов. Отменить ответственность нельзя.',
+   648→    ideaFull:'Существование предшествует сущности: сначала ты есть — потом определяешь себя выборами. Заранее написанного сценария нет, а значит, нет и оправданий. Свобода — приговор, на который нельзя подать апелляцию.',
+   649→    quote:'Человек осуждён быть свободным', quoteSrc:'«Экзистенциализм — это гуманизм»',
+   650→    algo:'Доверие алгоритму он назвал бы дурной верой: попыткой спрятаться от свободы, отдав выбор машине. «Алгоритм так показал» — не оправдание: клик всё равно твой. Даже отказываясь выбирать, ты выбираешь — отказ. Ответственность не отменяется, а лишь переименовывается в «ленту». Свобода давит — потому её так охотно отдают. Но осуждён быть свободным — именно ты.',
+   651→    question:'«Алгоритм так показал» — это выбор или отговорка?'
+   652→  },
+   653→];
+   654→// Линии-связи между узлами (индексы PHILOSOPHERS) — «созвездие»
+   655→const EDGES = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[1,5],[2,5],[0,4]];
+   656→
+   657→const REDUCED      = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+   658→const FINE_POINTER = window.matchMedia('(pointer: fine)').matches;
+   659→const HAS_GSAP     = typeof window.gsap !== 'undefined';
+   660→const HAS_ST       = HAS_GSAP && typeof window.ScrollTrigger !== 'undefined';
+   661→if (HAS_ST) gsap.registerPlugin(ScrollTrigger);   // скролл-анимации миров (часть 2)
+   662→
+   663→const TAU  = Math.PI * 2;
+   664→const lerp = (a, b, t) => a + (b - a) * t;
+   665→const rand = (min, max) => min + Math.random() * (max - min);
+   666→
+   667→// #E8B84B + 0.5 -> 'rgba(232,184,75,0.5)'
+   668→function hexToRgba(hex, a = 1){
+   669→  const n = parseInt(hex.slice(1), 16);
+   670→  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+   671→}
+   672→
+   673→/* ------------------------------------------------------------
+   674→   2. CANVAS-МИР
+   675→   Мировые координаты = экранные при z = 1.
+   676→   Камера: z — зум, x/y — мировая точка в центре экрана,
+   677→   px/py — параллакс от мыши (гаснет при зуме).
+   678→   ------------------------------------------------------------ */
+   679→const canvas = document.getElementById('cosmos');
+   680→const ctx    = canvas.getContext('2d');
+   681→let W = 0, H = 0, DPR = 1, time = 0, framePar = 1;
+   682→
+   683→const cam = { x: 0, y: 0, z: 1, px: 0, py: 0 };
+   684→
+   685→// Состояние мира (твинов GSAP)
+   686→const worldState = { edge: 0, node: 0 };   // прозрачность связей и узлов
+   687→let introActive = false;
+   688→let entering    = false;                    // идёт zoom-переход
+   689→let hoverNode   = null;
+   690→
+   691→/* --- Свечения: рисуем спрайтами (offscreen canvas) — быстро --- */
+   692→function makeGlow(color){
+   693→  const s = 96, c = document.createElement('canvas');
+   694→  c.width = c.height = s;
+   695→  const g = c.getContext('2d');
+   696→  const grd = g.createRadialGradient(s/2, s/2, 0, s/2, s/2, s/2);
+   697→  grd.addColorStop(0.00, hexToRgba(color, .85));
+   698→  grd.addColorStop(0.22, hexToRgba(color, .32));
+   699→  grd.addColorStop(0.55, hexToRgba(color, .08));
+   700→  grd.addColorStop(1.00, 'rgba(0,0,0,0)');
+   701→  g.fillStyle = grd;
+   702→  g.fillRect(0, 0, s, s);
+   703→  return c;
+   704→}
+   705→const sprites = {};
+   706→PHILOSOPHERS.forEach(p => sprites[p.id] = makeGlow(p.color));
+   707→const spriteNeutral = makeGlow('#9AA6DC');   // нейтральные частицы
+   708→
+   709→/* --- Узлы-философы --- */
+   710→const nodes = PHILOSOPHERS.map((p, i) => ({
+   711→  ...p, i, px: 0, py: 0,          // px/py — экранные координаты
+   712→  hover: false, labelA: 0,        // плавное появление подписи
+   713→  pulse: rand(0, TAU),            // фаза пульсации
+   714→}));
+   715→function clusterR(){ return Math.max(22, Math.min(44, Math.min(W, H) * 0.045)); }
+   716→
+   717→/* --- Частицы --- */
+   718→const particles = [];
+   719→function initParticles(){
+   720→  particles.length = 0;
+   721→  const total = Math.round(Math.min(240, Math.max(90, (W * H) / 6000)));
+   722→  for (let i = 0; i < total; i++){
+   723→    const colored = Math.random() < 0.5;                 // половина — «цветные»
+   724→    const node = colored ? Math.floor(rand(0, 6)) : -1;  // летят к своему узлу
+   725→    particles.push({
+   726→      fx: rand(0, W), fy: rand(0, H),                    // свободный дрейф
+   727→      vx: rand(-0.12, 0.12), vy: rand(-0.12, 0.12),
+   728→      r: rand(0.6, 1.9),
+   729→      sprite: node >= 0 ? sprites[PHILOSOPHERS[node].id] : spriteNeutral,
+   730→      node,
+   731→      baseAng: rand(0, TAU),                             // орбита вокруг узла
+   732→      radF: 0.1 + Math.sqrt(Math.random()) * 0.9,        // радиус орбиты (доля)
+   733→      orbSpeed: rand(0.08, 0.3) * (Math.random() < .5 ? -1 : 1),
+   734→      tw: rand(0.4, 1.4), ph: rand(0, TAU),              // мерцание
+   735→      assemble: REDUCED ? 1 : 0,                         // 0 = хаос, 1 = в узле
+   736→      x: 0, y: 0,
+   737→    });
+   738→  }
+   739→}
+   740→
+   741→/* --- Далёкие звёзды (экранное пространство, не летят при зуме) --- */
+   742→const stars = [];
+   743→function initStars(){
+   744→  stars.length = 0;
+   745→  const n = Math.round(W * H / 26000);
+   746→  for (let i = 0; i < n; i++){
+   747→    stars.push({ x: Math.random(), y: Math.random(), r: rand(0.4, 1.1), tw: rand(0.5, 2), ph: rand(0, TAU) });
+   748→  }
+   749→}
+   750→
+   751→/* --- 3D-сетка «горизонт» — отдельный холст поверх сцены ---
+   752→   Включается только на время влёта в узел (startGrid3d):
+   753→   перспектива снизу, бегущие линии и свечение горизонта
+   754→   в цвете философа — «влёт» вместо простого приближения. */
+   755→const gridCanvas = document.getElementById('grid3d');
+   756→const gctx       = gridCanvas.getContext('2d');
+   757→const grid3d     = { active: false, alpha: 0, off: 0, speed: .5, color: '#9B7EDE' };
+   758→
+   759→/* --- Размеры --- */
+   760→function resize(){
+   761→  DPR = Math.min(window.devicePixelRatio || 1, 2);
+   762→  W = window.innerWidth; H = window.innerHeight;
+   763→  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+   764→  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+   765→  nodes.forEach(n => { n.px = n.x * W; n.py = n.y * H; });
+   766→  if (cam.z === 1){ cam.x = W / 2; cam.y = H / 2; }
+   767→  // холст сетки — те же размеры и плотность пикселей
+   768→  gridCanvas.width = Math.round(W * DPR); gridCanvas.height = Math.round(H * DPR);
+   769→  gctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+   770→}
+   771→
+   772→/* --- Шаг физики частиц --- */
+   773→function stepParticles(){
+   774→  for (const p of particles){
+   775→    p.fx += p.vx; p.fy += p.vy;                       // свободный дрейф
+   776→    if (p.fx < -20) p.fx = W + 20; if (p.fx > W + 20) p.fx = -20;
+   777→    if (p.fy < -20) p.fy = H + 20; if (p.fy > H + 20) p.fy = -20;
+   778→    if (p.node >= 0){
+   779→      const n = nodes[p.node];
+   780→      const ang = p.baseAng + time * p.orbSpeed;      // медленная орбита
+   781→      const rad = p.radF * clusterR();
+   782→      const tx = n.px + Math.cos(ang) * rad;
+   783→      const ty = n.py + Math.sin(ang) * rad * 0.82;   // слегка сплюснуто
+   784→      p.x = lerp(p.fx, tx, p.assemble);               // assemble твинит GSAP
+   785→      p.y = lerp(p.fy, ty, p.assemble);
+   786→    } else { p.x = p.fx; p.y = p.fy; }
+   787→  }
+   788→}
+   789→
+   790→/* --- Рендер --- */
+   791→function draw(){
+   792→  ctx.fillStyle = '#0a0a0f';
+   793→  ctx.fillRect(0, 0, W, H);
+   794→
+   795→  // звёзды фона
+   796→  for (const s of stars){
+   797→    const a = 0.05 + 0.2 * (0.5 + 0.5 * Math.sin(time * s.tw + s.ph));
+   798→    ctx.fillStyle = `rgba(210,218,245,${a})`;
+   799→    ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, TAU); ctx.fill();
+   800→  }
+   801→
+   802→  // параллакс гаснет при зуме
+   803→  framePar = 1 - Math.min(1, (cam.z - 1) / 3);
+   804→
+   805→  ctx.save();
+   806→  ctx.translate(W / 2, H / 2);
+   807→  ctx.scale(cam.z, cam.z);
+   808→  ctx.translate(-(cam.x + cam.px * framePar), -(cam.y + cam.py * framePar));
+   809→
+   810→  drawEdges();
+   811→  drawParticleLinks();
+   812→  drawParticles();
+   813→  drawNodes();
+   814→
+   815→  ctx.restore();
+   816→}
+   817→
+   818→/* --- 3D-сетка «горизонт» (синтвейв-влёт вместо простого приближения) --- */
+   819→function startGrid3d(color){
+   820→  if (REDUCED || !HAS_GSAP) return;            // в статичном режиме сетка не нужна
+   821→  grid3d.color = color;
+   822→  grid3d.active = true;
+   823→  grid3d.off = 0;
+   824→  gsap.killTweensOf(grid3d);
+   825→  gsap.to(grid3d, { alpha: 1, duration: .45, ease: 'power2.out' });
+   826→  // линии разгоняются по мере влёта камеры в узел
+   827→  gsap.fromTo(grid3d, { speed: .45 }, { speed: 3.6, duration: 1.9, ease: 'power2.in' });
+   828→}
+   829→function stopGrid3d(){
+   830→  if (!grid3d.active) return;
+   831→  gsap.killTweensOf(grid3d);
+   832→  gsap.to(grid3d, {
+   833→    alpha: 0, duration: .4, ease: 'power1.out',
+   834→    onComplete: () => { grid3d.active = false; gctx.clearRect(0, 0, W, H); }
+   835→  });
+   836→}
+   837→function drawGrid3d(dt){
+   838→  if (!grid3d.active || grid3d.alpha <= 0.005) return;
+   839→  gctx.clearRect(0, 0, W, H);
+   840→  gctx.save();
+   841→  gctx.globalAlpha = grid3d.alpha;
+   842→  const hy = H * 0.46;                          // линия горизонта
+   843→  // тёплое свечение неба у горизонта
+   844→  const halo = gctx.createLinearGradient(0, hy - 70, 0, hy + 120);
+   845→  halo.addColorStop(0, 'rgba(0,0,0,0)');
+   846→  halo.addColorStop(.55, hexToRgba(grid3d.color, .16 * grid3d.alpha));
+   847→  halo.addColorStop(1, 'rgba(0,0,0,0)');
+   848→  gctx.fillStyle = halo;
+   849→  gctx.fillRect(0, hy - 70, W, 190);
+   850→  // сама линия горизонта — ярче к центру
+   851→  const hl = gctx.createLinearGradient(0, 0, W, 0);
+   852→  hl.addColorStop(0, hexToRgba(grid3d.color, 0));
+   853→  hl.addColorStop(.5, hexToRgba(grid3d.color, .9 * grid3d.alpha));
+   854→  hl.addColorStop(1, hexToRgba(grid3d.color, 0));
+   855→  gctx.strokeStyle = hl; gctx.lineWidth = 1.4;
+   856→  gctx.beginPath(); gctx.moveTo(0, hy); gctx.lineTo(W, hy); gctx.stroke();
+   857→  // вертикальные «рельсы», сходящиеся к точке схода на горизонте
+   858→  const NV = 13, spreadB = W * 0.17, spreadT = W * 0.012;
+   859→  for (let i = -NV; i <= NV; i++){
+   860→    const g2 = gctx.createLinearGradient(0, hy, 0, H);
+   861→    g2.addColorStop(0, hexToRgba(grid3d.color, 0));
+   862→    g2.addColorStop(1, hexToRgba(grid3d.color, .55 * grid3d.alpha));
+   863→    gctx.strokeStyle = g2; gctx.lineWidth = 1;
+   864→    gctx.beginPath();
+   865→    gctx.moveTo(W / 2 + i * spreadT, hy);
+   866→    gctx.lineTo(W / 2 + i * spreadB, H);
+   867→    gctx.stroke();
+   868→  }
+   869→  // бегущие горизонтальные линии: к горизонту — плотнее (перспектива)
+   870→  grid3d.off = (grid3d.off + dt * grid3d.speed) % 1;
+   871→  const ROWS = 20;
+   872→  for (let k = 0; k < ROWS; k++){
+   873→    const p = (k + grid3d.off) / ROWS;
+   874→    if (p <= 0.001) continue;
+   875→    const y = hy + (H - hy) * Math.pow(p, 2.5);
+   876→    gctx.strokeStyle = hexToRgba(grid3d.color, Math.pow(p, 1.7) * .6 * grid3d.alpha);
+   877→    gctx.lineWidth = p > .6 ? 1.4 : 1;
+   878→    gctx.beginPath(); gctx.moveTo(0, y); gctx.lineTo(W, y); gctx.stroke();
+   879→  }
+   880→  gctx.restore();
+   881→}
+   882→
+   883→// линии-связи между шестью узлами
+   884→function drawEdges(){
+   885→  if (worldState.edge <= 0.01) return;
+   886→  ctx.lineWidth = 1 / cam.z;                        // всегда волосяная линия
+   887→  for (const [i, j] of EDGES){
+   888→    const a = nodes[i], b = nodes[j];
+   889→    const g = ctx.createLinearGradient(a.px, a.py, b.px, b.py);
+   890→    g.addColorStop(0, hexToRgba(a.color, 0.36 * worldState.edge * framePar));
+   891→    g.addColorStop(1, hexToRgba(b.color, 0.36 * worldState.edge * framePar));
+   892→    ctx.strokeStyle = g;
+   893→    ctx.beginPath(); ctx.moveTo(a.px, a.py); ctx.lineTo(b.px, b.py); ctx.stroke();
+   894→  }
+   895→}
+   896→
+   897→// «созвездие»: тонкие линии между близкими частицами
+   898→const LINK_DIST = 100, LINK_DIST2 = LINK_DIST * LINK_DIST;
+   899→function drawParticleLinks(){
+   900→  if (worldState.edge <= 0.01 || cam.z > 2.5) return;   // при зуме пропускаем
+   901→  ctx.lineWidth = 1 / cam.z;
+   902→  for (let i = 0; i < particles.length; i++){
+   903→    const p = particles[i];
+   904→    for (let j = i + 1; j < particles.length; j++){
+   905→      const q = particles[j];
+   906→      const dx = p.x - q.x; if (dx > LINK_DIST || dx < -LINK_DIST) continue;
+   907→      const dy = p.y - q.y; if (dy > LINK_DIST || dy < -LINK_DIST) continue;
+   908→      const d2 = dx * dx + dy * dy;
+   909→      if (d2 < LINK_DIST2){
+   910→        const a = (1 - Math.sqrt(d2) / LINK_DIST) * 0.12 * worldState.edge * framePar;
+   911→        ctx.strokeStyle = `rgba(154,166,220,${a})`;
+   912→        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+   913→      }
+   914→    }
+   915→  }
+   916→}
+   917→
+   918→function drawParticles(){
+   919→  for (const p of particles){
+   920→    const twinkle = 0.65 + 0.35 * Math.sin(time * p.tw + p.ph);
+   921→    const s = p.r * 7;                                 // размер спрайта
+   922→    ctx.globalAlpha = twinkle * (0.35 + 0.65 * worldState.node);
+   923→    ctx.drawImage(p.sprite, p.x - s / 2, p.y - s / 2, s, s);
+   924→  }
+   925→  ctx.globalAlpha = 1;
+   926→}
+   927→
+   928→function drawNodes(){
+   929→  if (worldState.node <= 0.01) return;
+   930→  const cr = clusterR();
+   931→  ctx.textAlign = 'center';
+   932→  for (const n of nodes){
+   933→    const pulse = REDUCED ? 1 : 1 + 0.07 * Math.sin(time * 1.3 + n.pulse);
+   934→
+   935→    // ореол (спрайт свечения цвета философа)
+   936→    const gs = cr * 3.4 * pulse;
+   937→    ctx.globalAlpha = 0.85 * worldState.node;
+   938→    ctx.drawImage(sprites[n.id], n.px - gs / 2, n.py - gs / 2, gs, gs);
+   939→
+   940→    // ядро
+   941→    ctx.globalAlpha = worldState.node;
+   942→    ctx.fillStyle = '#fff';
+   943→    ctx.beginPath(); ctx.arc(n.px, n.py, 3.2, 0, TAU); ctx.fill();
+   944→
+   945→    // тонкое кольцо
+   946→    ctx.strokeStyle = hexToRgba(n.color, (n.hover ? 0.95 : 0.45) * worldState.node);
+   947→    ctx.lineWidth = (n.hover ? 1.5 : 1) / cam.z;
+   948→    ctx.beginPath(); ctx.arc(n.px, n.py, cr * 0.62, 0, TAU); ctx.stroke();
+   949→
+   950→    // подпись при наведении
+   951→    const target = (n.hover && introActive && !entering && cam.z < 1.2) ? 1 : 0;
+   952→    n.labelA = lerp(n.labelA, target, 0.12);
+   953→    if (n.labelA > 0.02){
+   954→      ctx.globalAlpha = n.labelA * worldState.node;
+   955→      ctx.fillStyle = hexToRgba(n.color, 0.95);
+   956→      ctx.font = '500 12px Inter, sans-serif';
+   957→      try { ctx.letterSpacing = '3px'; } catch(e){}
+   958→      ctx.fillText(n.name.toUpperCase(), n.px, n.py + cr * 0.62 + 24);
+   959→      try { ctx.letterSpacing = '0px'; } catch(e){}
+   960→    }
+   961→  }
+   962→  ctx.globalAlpha = 1;
+   963→}
+   964→
+   965→/* --- Главный цикл --- */
+   966→const mouse = { x: -100, y: -100 };
+   967→let last = performance.now();
+   968→function loop(now){
+   969→  requestAnimationFrame(loop);
+   970→  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+   971→  time += dt * (REDUCED ? 0.25 : 1);                // reduced motion — всё медленнее
+   972→  stepParticles();
+   973→  // параллакс от мыши (мягкое следование)
+   974→  if (FINE_POINTER && !REDUCED){
+   975→    cam.px = lerp(cam.px, (mouse.x - W / 2) * 0.03, 0.04);
+   976→    cam.py = lerp(cam.py, (mouse.y - H / 2) * 0.03, 0.04);
+   977→  }
+   978→  updateCursor();
+   979→  draw();
+   980→  drawGrid3d(dt);
+   981→}
+   982→
+   983→// наведение на узлы (по координатам мыши)
+   984→function nodeAt(x, y){
+   985→  const r = clusterR() * 0.8 + 18;
+   986→  for (const n of nodes){
+   987→    if (Math.hypot(x - n.px, y - n.py) < r) return n;
+   988→  }
+   989→  return null;
+   990→}
+   991→window.addEventListener('mousemove', e => {
+   992→  mouse.x = e.clientX; mouse.y = e.clientY;
+   993→  if (!cursorShown){ cursorShown = true; document.documentElement.classList.add('cursor-on'); }
+   994→  const hov = (introActive && mapScreen.hidden && worldScreen.hidden && !entering && cam.z < 1.05) ? nodeAt(e.clientX, e.clientY) : null;
+   995→  if (hov !== hoverNode){
+   996→    hoverNode = hov;
+   997→    nodes.forEach(n => n.hover = (n === hov));
+   998→    refreshRing();
+   999→  }
+  1000→});
+  1001→canvas.addEventListener('click', e => {
+  1002→  if (!introActive || entering) return;
+  1003→  const n = nodeAt(e.clientX, e.clientY);
+  1004→  if (n) enterTo(n);                                // клик по узлу = влёт к нему
+  1005→});
+  1006→
+  1007→/* ------------------------------------------------------------
+  1008→   3. ПРЕЛОАДЕР
+  1009→   Прогресс «догоняет» 100% только после готовности шрифтов.
+  1010→   ------------------------------------------------------------ */
+  1011→const preEl      = document.getElementById('preloader');
+  1012→const preCounter = preEl.querySelector('.pre-counter');
+  1013→const preBar     = preEl.querySelector('.pre-line span');
+  1014→let fontsReady = false, preDone = false, prog = 0;
+  1015→if (document.fonts && document.fonts.ready){
+  1016→  document.fonts.ready.then(() => fontsReady = true);
+  1017→}
+  1018→window.addEventListener('load', () => fontsReady = true);
+  1019→setTimeout(() => fontsReady = true, 4000);          // страховка от медленной сети
+  1020→
+  1021→function tickPre(){
+  1022→  if (preDone) return;
+  1023→  const cap = fontsReady ? 100 : 86;
+  1024→  prog = Math.min(cap, prog + Math.max(0.4, (cap - prog) * 0.05));
+  1025→  preCounter.textContent = Math.floor(prog) + '%';
+  1026→  preBar.style.transform = `scaleX(${prog / 100})`;
+  1027→  if (prog >= 99.6){ finishPre(); return; }
+  1028→  requestAnimationFrame(tickPre);
+  1029→}
+  1030→function finishPre(){
+  1031→  preDone = true;
+  1032→  preCounter.textContent = '100%';
+  1033→  preBar.style.transform = 'scaleX(1)';
+  1034→  preEl.querySelector('.pre-node').style.animation = 'none'; // отдаём transform GSAP
+  1035→  const hide = () => {
+  1036→    preEl.classList.add('done');
+  1037→    setTimeout(() => { preEl.style.display = 'none'; }, 700);
+  1038→    startIntro();
+  1039→  };
+  1040→  if (HAS_GSAP && !REDUCED){
+  1041→    gsap.timeline()
+  1042→      .to(['.pre-counter', '.pre-line'], { opacity: 0, duration: 0.35 })
+  1043→      .to('.pre-node', { scale: 16, opacity: 0, duration: 0.7, ease: 'power2.in' }, '<');
+  1044→    setTimeout(hide, 550);
+  1045→  } else {
+  1046→    setTimeout(hide, 250);
+  1047→  }
+  1048→}
+  1049→
+  1050→/* ------------------------------------------------------------
+  1051→   4. ТИПОГРАФИКА
+  1052→   ------------------------------------------------------------ */
+  1053→// Заголовок: слова -> буквы; слово «алгоритмов» — единым градиентным блоком
+  1054→function buildTitle(){
+  1055→  const el = document.getElementById('title');
+  1056→  const frag = document.createElement('div');
+  1057→  frag.setAttribute('aria-hidden', 'true');
+  1058→  frag.innerHTML = TITLE.split(' ').map(w => {
+  1059→    if (w === 'алгоритмов') return `<span class="word accent ch">${w}</span>`;
+  1060→    return `<span class="word">${[...w].map(c => `<span class="ch">${c}</span>`).join('')}</span>`;
+  1061→  }).join(' ');
+  1062→  el.appendChild(frag);
+  1063→}
+  1064→
+  1065→// Печатная машинка для слогана
+  1066→function typeText(){
+  1067→  const el = document.getElementById('slogan-text');
+  1068→  if (REDUCED){ el.textContent = SLOGAN; return Promise.resolve(); }
+  1069→  document.body.classList.add('typing');
+  1070→  return new Promise(res => {
+  1071→    let i = 0;
+  1072→    (function tick(){
+  1073→      i++; el.textContent = SLOGAN.slice(0, i);
+  1074→      if (i < SLOGAN.length) setTimeout(tick, rand(24, 58));
+  1075→      else res();
+  1076→    })();
+  1077→  });
+  1078→}
+  1079→
+  1080→/* ------------------------------------------------------------
+  1081→   5. ЗВУК (Web Audio, генерируется на лету — без файлов)
+  1082→   Дрон-фон + мягкие бипы + «вжух» на переходе.
+  1083→   ------------------------------------------------------------ */
+  1084→const Sound = {
+  1085→  ctx: null, master: null, noiseBuf: null, muted: true,
+  1086→  ensure(){
+  1087→    if (this.ctx) return true;
+  1088→    try{
+  1089→      const AC = window.AudioContext || window.webkitAudioContext;
+  1090→      if (!AC) return false;
+  1091→      this.ctx = new AC();
+  1092→      this.master = this.ctx.createGain();
+  1093→      this.master.gain.value = 0;
+  1094→      this.master.connect(this.ctx.destination);
+  1095→      // фильтр + три расстроенных осциллятора = космический дрон
+  1096→      const filt = this.ctx.createBiquadFilter();
+  1097→      filt.type = 'lowpass'; filt.frequency.value = 240; filt.Q.value = 0.6;
+  1098→      filt.connect(this.master);
+  1099→      [[55, 'sine', 0.5], [55.6, 'sine', 0.5], [110.4, 'triangle', 0.12]].forEach(([f, t, v]) => {
+  1100→        const o = this.ctx.createOscillator(); o.type = t; o.frequency.value = f;
+  1101→        const g = this.ctx.createGain(); g.gain.value = v;
+  1102→        o.connect(g); g.connect(filt); o.start();
+  1103→      });
+  1104→      // медленный LFO дышит фильтром
+  1105→      const lfo = this.ctx.createOscillator(); lfo.frequency.value = 0.06;
+  1106→      const lg = this.ctx.createGain(); lg.gain.value = 110;
+  1107→      lfo.connect(lg); lg.connect(filt.frequency); lfo.start();
+  1108→      // тихий шумовой «воздух» (он же источник для whoosh)
+  1109→      const nb = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+  1110→      const d = nb.getChannelData(0);
+  1111→      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  1112→      this.noiseBuf = nb;
+  1113→      const ns = this.ctx.createBufferSource(); ns.buffer = nb; ns.loop = true;
+  1114→      const nf = this.ctx.createBiquadFilter(); nf.type = 'bandpass';
+  1115→      nf.frequency.value = 420; nf.Q.value = 0.5;
+  1116→      const ng = this.ctx.createGain(); ng.gain.value = 0.015;
+  1117→      ns.connect(nf); nf.connect(ng); ng.connect(this.master); ns.start();
+  1118→      return true;
+  1119→    } catch(e){ return false; }
+  1120→  },
+  1121→  toggle(){
+  1122→    if (!this.ensure()) return this.muted;
+  1123→    if (this.ctx.resume) this.ctx.resume();
+  1124→    this.muted = !this.muted;
+  1125→    const t = this.ctx.currentTime;
+  1126→    this.master.gain.cancelScheduledValues(t);
+  1127→    this.master.gain.linearRampToValueAtTime(this.muted ? 0 : 0.055, t + 0.5);
+  1128→    const btn = document.getElementById('mute-btn');
+  1129→    btn.classList.toggle('unmuted', !this.muted);
+  1130→    btn.setAttribute('aria-pressed', String(!this.muted));
+  1131→    return this.muted;
+  1132→  },
+  1133→  blip(){                                  // тёплый короткий клик
+  1134→    if (!this.ctx || this.muted) return;
+  1135→    const t = this.ctx.currentTime;
+  1136→    const o = this.ctx.createOscillator(); o.type = 'sine';
+  1137→    o.frequency.setValueAtTime(540, t);
+  1138→    o.frequency.exponentialRampToValueAtTime(320, t + 0.16);
+  1139→    const g = this.ctx.createGain();
+  1140→    g.gain.setValueAtTime(0.0001, t);
+  1141→    g.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
+  1142→    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+  1143→    o.connect(g); g.connect(this.ctx.destination);
+  1144→    o.start(t); o.stop(t + 0.25);
+  1145→  },
+  1146→  whoosh(){                                // шумовой подъём для zoom-перехода
+  1147→    if (!this.ctx || this.muted) return;
+  1148→    const t = this.ctx.currentTime;
+  1149→    const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuf;
+  1150→    const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+  1151→    f.frequency.setValueAtTime(180, t);
+  1152→    f.frequency.exponentialRampToValueAtTime(2400, t + 1.5);
+  1153→    const g = this.ctx.createGain();
+  1154→    g.gain.setValueAtTime(0.0001, t);
+  1155→    g.gain.exponentialRampToValueAtTime(0.28, t + 1.2);
+  1156→    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.7);
+  1157→    src.connect(f); f.connect(g); g.connect(this.ctx.destination);
+  1158→    src.start(t); src.stop(t + 1.8);
+  1159→  }
+  1160→};
+  1161→document.getElementById('mute-btn').addEventListener('click', () => Sound.toggle());
+  1162→
+  1163→/* ------------------------------------------------------------
+  1164→   6. КАСТОМНЫЙ КУРСОР (только точные указатели)
+  1165→   ------------------------------------------------------------ */
+  1166→const dotEl  = document.getElementById('cursor-dot');
+  1167→const ringEl = document.getElementById('cursor-ring');
+  1168→let cursorShown = false, domHover = false;
+  1169→let ringX = -100, ringY = -100;
+  1170→
+  1171→function refreshRing(){
+  1172→  ringEl.classList.toggle('is-hover', domHover || !!hoverNode);
+  1173→}
+  1174→if (FINE_POINTER){
+  1175→  document.documentElement.classList.add('has-cursor');
+  1176→  document.addEventListener('mouseover', e => {
+  1177→    domHover = !!(e.target.closest && e.target.closest('[data-hover]'));
+  1178→    refreshRing();
+  1179→  });
+  1180→  window.addEventListener('mousedown', () => ringEl.classList.add('is-down'));
+  1181→  window.addEventListener('mouseup',   () => ringEl.classList.remove('is-down'));
+  1182→  document.addEventListener('mouseleave', () => document.documentElement.classList.remove('cursor-on'));
+  1183→  document.addEventListener('mouseenter', () => { if (cursorShown) document.documentElement.classList.add('cursor-on'); });
+  1184→}
+  1185→function updateCursor(){
+  1186→  if (!FINE_POINTER) return;
+  1187→  ringX = lerp(ringX, mouse.x, 0.18);
+  1188→  ringY = lerp(ringY, mouse.y, 0.18);
+  1189→  dotEl.style.transform  = `translate3d(${mouse.x}px,${mouse.y}px,0) translate(-50%,-50%)`;
+  1190→  ringEl.style.transform = `translate3d(${ringX}px,${ringY}px,0) translate(-50%,-50%)`;
+  1191→}
+  1192→
+  1193→/* ------------------------------------------------------------
+  1194→   7. GSAP-СЦЕНЫ
+  1195→   ------------------------------------------------------------ */
+  1196→const flash = document.getElementById('flash');
+  1197→const introEl = document.getElementById('intro');
+  1198→
+  1199→/* Интро прячется ЦЕЛИКОМ (visibility) и без «хвостов» твинов:
+  1200→   иначе полупрозрачные экраны карты/мира показывают сквозь себя
+  1201→   «призрачные» кнопки интро (баг «ОТКРЫТЬ КАРТУ» при выходе из мира) */
+  1202→const INTRO_ELS = ['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'];
+  1203→function hideIntroNow(){
+  1204→  if (HAS_GSAP && !REDUCED){
+  1205→    gsap.killTweensOf(INTRO_ELS);
+  1206→    gsap.set(INTRO_ELS, { opacity: 0, y: 0 });
+  1207→  }
+  1208→  introEl.style.visibility = 'hidden';
+  1209→}
+  1210→function revealIntro(){
+  1211→  introEl.style.visibility = 'visible';
+  1212→  if (HAS_GSAP && !REDUCED){
+  1213→    gsap.killTweensOf(INTRO_ELS);
+  1214→    gsap.to(INTRO_ELS, { opacity: 1, y: 0, duration: .8, stagger: .06, ease: 'power2.out' });
+  1215→  } else {
+  1216→    introEl.style.opacity = 1;
+  1217→  }
+  1218→}
+  1219→
+  1220→// Интро: сборка частиц → узлы → надзаголовок → буквы → слоган → кнопка
+  1221→function startIntro(){
+  1222→  introActive = true;
+  1223→
+  1224→  // Статичный режим: reduced motion или GSAP не загрузился с CDN
+  1225→  if (REDUCED || !HAS_GSAP){
+  1226→    document.body.classList.add('reveal-static');
+  1227→    worldState.edge = 1; worldState.node = 1;
+  1228→    typeText().then(() => document.body.classList.add('reveal-static'));
+  1229→    return;
+  1230→  }
+  1231→
+  1232→  // 1) частицы слетаются в шесть узлов
+  1233→  gsap.to(particles.filter(p => p.node >= 0), {
+  1234→    assemble: 1, duration: 2.6, ease: 'power2.inOut',
+  1235→    stagger: { each: 0.005, from: 'random' }
+  1236→  });
+  1237→  // 2) связи и узлы проявляются
+  1238→  gsap.to(worldState, { edge: 1, node: 1, duration: 2.4, delay: 1.0, ease: 'power2.out' });
+  1239→
+  1240→  // 3) типографская сцена
+  1241→  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  1242→  tl.to('.overtitle', { opacity: 1, duration: 1.0 }, 0.9)
+  1243→    .from('.overtitle .line', { scaleX: 0, duration: 1.1, ease: 'power2.inOut' }, 0.9)
+  1244→    .from('.ch', { y: 36, opacity: 0, filter: 'blur(10px)', duration: 0.9, stagger: 0.022 }, 1.15)
+  1245→    .add(() => {
+  1246→      typeText().then(() => {
+  1247→        gsap.to('#enter-btn', { opacity: 1, y: 0, duration: 1.0, ease: 'power3.out' });
+  1248→        gsap.to('#hint',      { opacity: 1, duration: 1.0, delay: 0.35 });
+  1249→      });
+  1250→    })
+  1251→    .to('#mute-btn', { opacity: 1, duration: 1.0 }, 0.9);
+  1252→}
+  1253→
+  1254→// Вход с интро: влёт сквозь узел с 3D-сеткой «горизонт» → карта (экран 1)
+  1255→function enterTo(node){
+  1256→  if (entering || !introActive) return;
+  1257→  entering = true;
+  1258→  hoverNode = null;
+  1259→  nodes.forEach(n => n.hover = false);
+  1260→  Sound.blip();
+  1261→
+  1262→  // вспышка окрашивается цветом философа
+  1263→  flash.style.background =
+  1264→    `radial-gradient(circle at 50% 50%, #ffffff 0%, ${node.color} 46%, ${hexToRgba(node.color, 0.92)} 100%)`;
+  1265→
+  1266→  if (HAS_GSAP && !REDUCED){
+  1267→    Sound.whoosh();
+  1268→    startGrid3d(node.color);                    // сетка-горизонт выкатывается навстречу
+  1269→    gsap.killTweensOf(INTRO_ELS);
+  1270→    gsap.timeline()
+  1271→      .to(INTRO_ELS, { opacity: 0, y: -26, duration: 0.5, stagger: 0.05, ease: 'power2.in' })
+  1272→      .add(() => {
+  1273→        // камера летит в узел
+  1274→        gsap.to(cam, { z: 15, x: node.px, y: node.py, duration: 1.6, ease: 'power3.in' });
+  1275→      })
+  1276→      .to(flash, { opacity: 1, duration: 0.5, ease: 'power2.in' }, '-=0.15')
+  1277→      .add(() => { stopGrid3d(); showMap(true); });
+  1278→  } else {
+  1279→    // простой переход без анимаций
+  1280→    introEl.style.opacity = 0;
+  1281→    flash.style.transition = 'opacity .45s linear';
+  1282→    flash.style.opacity = 1;
+  1283→    setTimeout(() => showMap(true), 480);
+  1284→  }
+  1285→}
+  1286→
+  1287→/* ------------------------------------------------------------
+  1288→   8. ЭКРАН 1 · КАРТА (SVG-ГРАФ) И НАВИГАЦИЯ
+  1289→   Маршрут: интро → карта → мир;  назад: мир → карта → интро
+  1290→   ------------------------------------------------------------ */
+  1291→const MAP_W = 1200, MAP_H = 700;
+  1292→const mapScreen   = document.getElementById('map-screen');
+  1293→const worldScreen = document.getElementById('world-screen');
+  1294→const mapSvg      = document.getElementById('map-svg');
+  1295→const mapCard     = document.getElementById('map-card');
+  1296→const NSVG = 'http://www.w3.org/2000/svg';
+  1297→
+  1298→function svgEl(tag, attrs = {}){
+  1299→  const el = document.createElementNS(NSVG, tag);
+  1300→  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  1301→  return el;
+  1302→}
+  1303→
+  1304→/* На узких экранах «приближаем» viewBox к созвездию,
+  1305→   чтобы узлы и подписи остались читабельными */
+  1306→function updateMapViewBox(){
+  1307→  mapSvg.setAttribute('viewBox', W < 640 ? '160 40 900 680' : `0 0 ${MAP_W} ${MAP_H}`);
+  1308→}
+  1309→
+  1310→/* --- Построение графа: градиенты → рёбра → импульсы → узлы --- */
+  1311→function buildMap(){
+  1312→  mapSvg.innerHTML = '';
+  1313→  const defs = svgEl('defs');
+  1314→
+  1315→  // свечение каждого узла в цвет философа
+  1316→  PHILOSOPHERS.forEach(p => {
+  1317→    const g = svgEl('radialGradient', { id: 'ng-' + p.id });
+  1318→    [[0, .85], [.4, .25], [1, 0]].forEach(([o, a]) => {
+  1319→      g.appendChild(svgEl('stop', { offset: o, 'stop-color': p.color, 'stop-opacity': a }));
+  1320→    });
+  1321→    defs.appendChild(g);
+  1322→  });
+  1323→  // градиент каждого ребра — от цвета узла к цвету узла
+  1324→  EDGES.forEach(([a, b], i) => {
+  1325→    const A = PHILOSOPHERS[a], B = PHILOSOPHERS[b];
+  1326→    const g = svgEl('linearGradient', {
+  1327→      id: 'eg-' + i, gradientUnits: 'userSpaceOnUse',
+  1328→      x1: A.mx, y1: A.my, x2: B.mx, y2: B.my
+  1329→    });
+  1330→    g.appendChild(svgEl('stop', { offset: 0, 'stop-color': A.color, 'stop-opacity': .55 }));
+  1331→    g.appendChild(svgEl('stop', { offset: 1, 'stop-color': B.color, 'stop-opacity': .55 }));
+  1332→    defs.appendChild(g);
+  1333→  });
+  1334→  mapSvg.appendChild(defs);
+  1335→
+  1336→  // рёбра
+  1337→  EDGES.forEach(([a, b], i) => {
+  1338→    const A = PHILOSOPHERS[a], B = PHILOSOPHERS[b];
+  1339→    const line = svgEl('line', {
+  1340→      class: 'map-edge', x1: A.mx, y1: A.my, x2: B.mx, y2: B.my,
+  1341→      stroke: `url(#eg-${i})`, 'stroke-width': 1
+  1342→    });
+  1343→    mapSvg.appendChild(line);
+  1344→    if (HAS_GSAP && !REDUCED){
+  1345→      // рисование линии при входе на карту
+  1346→      const L = Math.hypot(B.mx - A.mx, B.my - A.my);
+  1347→      line.style.strokeDasharray = L;
+  1348→      line.style.strokeDashoffset = L;
+  1349→      // бегущий импульс — «пакет данных» в нейросети идей
+  1350→      const dot = svgEl('circle', { class: 'map-pulse', r: 1.7, fill: '#cfd6ff', opacity: 0 });
+  1351→      mapSvg.appendChild(dot);
+  1352→      const o = { t: 0 };
+  1353→      gsap.to(o, {
+  1354→        t: 1, duration: rand(5, 9), delay: rand(1, 6),
+  1355→        repeat: -1, repeatDelay: rand(2, 6), ease: 'none',
+  1356→        onStart: () => gsap.set(dot, { opacity: .6 }),
+  1357→        onUpdate: () => {
+  1358→          dot.setAttribute('cx', lerp(A.mx, B.mx, o.t));
+  1359→          dot.setAttribute('cy', lerp(A.my, B.my, o.t));
+  1360→        }
+  1361→      });
+  1362→    }
+  1363→  });
+  1364→
+  1365→  // узлы
+  1366→  PHILOSOPHERS.forEach((p, i) => {
+  1367→    const g = svgEl('g', {
+  1368→      class: 'map-node', 'data-hover': '', 'data-i': i,
+  1369→      tabindex: 0, role: 'button', 'aria-label': `Мир философа: ${p.name}`
+  1370→    });
+  1371→    g.setAttribute('transform', `translate(${p.mx} ${p.my})`);
+  1372→    g.style.setProperty('--c', p.color);
+  1373→    const glow = svgEl('circle', { class: 'node-glow', r: 42, fill: `url(#ng-${p.id})` });
+  1374→    glow.style.animation = `glowPulse ${(3.2 + i * 0.35).toFixed(2)}s ease-in-out ${(i * 0.4).toFixed(2)}s infinite`;
+  1375→    const ring = svgEl('circle', { class: 'node-ring', r: 22, fill: 'rgba(10,10,15,.55)', stroke: p.color, 'stroke-width': 1.2 });
+  1376→    const core = svgEl('circle', { class: 'node-core', r: 4.5, fill: '#fff' });
+  1377→    const label = svgEl('text', { class: 'node-label', y: 48 });
+  1378→    label.textContent = p.name.toUpperCase();
+  1379→    g.append(glow, ring, core, label);
+  1380→    mapSvg.appendChild(g);
+  1381→    if (HAS_GSAP) gsap.set(g, { transformOrigin: 'center' });
+  1382→  });
+  1383→
+  1384→  updateMapViewBox();
+  1385→}
+  1386→
+  1387→/* --- Мини-карточка при наведении на узел --- */
+  1388→let cardShown = false;
+  1389→function showCard(g){
+  1390→  const p = PHILOSOPHERS[+g.dataset.i];
+  1391→  mapCard.style.setProperty('--cc', p.color);
+  1392→  mapCard.querySelector('.mc-name').textContent  = p.name;
+  1393→  mapCard.querySelector('.mc-years').textContent = p.years;
+  1394→  mapCard.querySelector('.mc-idea').textContent  = p.idea;
+  1395→  // позиция — по фактическому прямоугольнику узла на экране
+  1396→  const ringR = g.querySelector('.node-ring').getBoundingClientRect();
+  1397→  const wrap  = document.getElementById('map-wrap').getBoundingClientRect();
+  1398→  const cx = ringR.left + ringR.width / 2 - wrap.left;
+  1399→  const cy = ringR.top + ringR.height / 2 - wrap.top;
+  1400→  const cw = mapCard.offsetWidth, ch = mapCard.offsetHeight;
+  1401→  const x = Math.max(10, Math.min(wrap.width - cw - 10, cx - cw / 2));
+  1402→  const above = cy > wrap.height * 0.52;          // карточка снизу или сверху узла
+  1403→  const gap = ringR.height / 2 + 16;
+  1404→  let y = above ? cy - gap - ch : cy + gap;
+  1405→  y = Math.max(8, Math.min(wrap.height - ch - 8, y));
+  1406→  mapCard.style.left = x + 'px';
+  1407→  mapCard.style.top = y + 'px';
+  1408→  cardShown = true;
+  1409→  if (HAS_GSAP && !REDUCED){
+  1410→    gsap.fromTo(mapCard, { opacity: 0, y: above ? 10 : -10, scale: .96 },
+  1411→      { opacity: 1, y: 0, scale: 1, duration: .32, ease: 'power2.out', overwrite: true });
+  1412→  } else {
+  1413→    mapCard.style.opacity = 1;
+  1414→  }
+  1415→}
+  1416→function hideCard(){
+  1417→  if (!cardShown) return;
+  1418→  cardShown = false;
+  1419→  if (HAS_GSAP && !REDUCED) gsap.to(mapCard, { opacity: 0, duration: .22, overwrite: true });
+  1420→  else mapCard.style.opacity = 0;
+  1421→}
+  1422→
+  1423→/* --- Атмосфера canvas-фона под каждый экран --- */
+  1424→function setAmbient(edge, node, z, dur){
+  1425→  if (HAS_GSAP && !REDUCED){
+  1426→    gsap.to(worldState, { edge, node, duration: dur, ease: 'power2.out', overwrite: 'auto' });
+  1427→    gsap.to(cam, { z, x: W / 2, y: H / 2, duration: dur, ease: 'power2.out', overwrite: 'auto' });
+  1428→  } else {
+  1429→    worldState.edge = edge; worldState.node = node;
+  1430→    cam.z = z; cam.x = W / 2; cam.y = H / 2;
+  1431→  }
+  1432→}
+  1433→
+  1434→/* --- Показ карты (first = с отрисовкой рёбер) --- */
+  1435→function showMap(first){
+  1436→  killWorldST();                                   // триггеры мира больше не нужны
+  1437→  hideIntroNow();                                  // интро скрыто целиком (защита от «призрака» кнопок)
+  1438→  worldScreen.hidden = true; worldScreen.style.opacity = '';
+  1439→  mapScreen.hidden = false;
+  1440→  introActive = false;
+  1441→  setAmbient(0.3, 0.35, 1.15, 2.4);
+  1442→  if (HAS_GSAP && !REDUCED){
+  1443→    if (first){
+  1444→      gsap.fromTo(mapScreen, { opacity: 0 }, { opacity: 1, duration: .7, ease: 'power2.out' });
+  1445→      gsap.to(flash, { opacity: 0, duration: 1.1, delay: .3, ease: 'power2.out' });
+  1446→      gsap.timeline({ onComplete: () => { entering = false; } })
+  1447→        .fromTo('.map-head > *', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: .8, stagger: .1, ease: 'power3.out' }, .15)
+  1448→        .to('.map-edge', { strokeDashoffset: 0, duration: 1.3, stagger: .1, ease: 'power2.inOut' }, .4)
+  1449→        .fromTo('.map-node', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: .8, stagger: .09, ease: 'back.out(1.6)' }, .6)
+  1450→        .fromTo(['#map-hint', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .8 }, '-=0.3');
+  1451→    } else {
+  1452→      gsap.fromTo(mapScreen, { opacity: 0 }, { opacity: 1, duration: .5, ease: 'power2.out' });
+  1453→      gsap.timeline({ onComplete: () => { entering = false; } })
+  1454→        .fromTo('.map-head > *', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .6, stagger: .07, ease: 'power2.out' }, .1)
+  1455→        .fromTo('.map-node', { scale: .55, opacity: 0 }, { scale: 1, opacity: 1, duration: .65, stagger: .05, ease: 'back.out(1.7)' }, .15)
+  1456→        .fromTo(['#map-hint', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .6 }, .5);
+  1457→    }
+  1458→  } else {
+  1459→    flash.style.opacity = 0;
+  1460→    entering = false;
+  1461→  }
+  1462→}
+  1463→
+  1464→/* --- Влёт в мир философа (клик по узлу карты) --- */
+  1465→function flyToWorld(p, g){
+  1466→  if (entering) return;
+  1467→  entering = true;
+  1468→  hideCard();
+  1469→  g.classList.remove('hot');
+  1470→  Sound.blip();
+  1471→  flash.style.background =
+  1472→    `radial-gradient(circle at 50% 50%, #ffffff 0%, ${p.color} 46%, ${hexToRgba(p.color, .92)} 100%)`;
+  1473→  if (HAS_GSAP && !REDUCED){
+  1474→    Sound.whoosh();
+  1475→    startGrid3d(p.color);                        // 3D-сетка «горизонт» в цвете философа
+  1476→    // зумим сам SVG в точку узла (origin — экранный центр кольца)
+  1477→    const ringR = g.querySelector('.node-ring').getBoundingClientRect();
+  1478→    const svgR  = mapSvg.getBoundingClientRect();
+  1479→    const ox = ringR.left + ringR.width / 2 - svgR.left;
+  1480→    const oy = ringR.top + ringR.height / 2 - svgR.top;
+  1481→    gsap.timeline()
+  1482→      .to(['.map-head > *', '#map-hint', '#map-back'],
+  1483→        { opacity: 0, y: -16, duration: .4, stagger: .04, ease: 'power2.in' })
+  1484→      .to(mapSvg, { scale: 9, transformOrigin: `${ox}px ${oy}px`, duration: 1.5, ease: 'power3.in' }, .1)
+  1485→      .to(flash, { opacity: 1, duration: .5, ease: 'power2.in' }, 1.15)
+  1486→      .add(() => { stopGrid3d(); showWorld(p, +g.dataset.i); });
+  1487→  } else {
+  1488→    flash.style.transition = 'opacity .45s linear';
+  1489→    flash.style.opacity = 1;
+  1490→    setTimeout(() => showWorld(p, +g.dataset.i), 480);
+  1491→  }
+  1492→}
+  1493→
+  1494→/* ============================================================
+  1495→   9. ЭКРАН 2 · МИР ФИЛОСОФА (шаблон ×6) — ЧАСТЬ 2
+  1496→   Контент миров лежит в PHILOSOPHERS (ideaFull / algo / question…).
+  1497→   Портрет — рисованный SVG line-art в цвете философа (без картинок):
+  1498→   узнаваемые черты — борода Сократа, длинные волосы Декарта,
+  1499→   лысина Канта, усы Ницше, лавровый венок Марка Аврелия,
+  1500→   круглые очки Сартра. Секции мира проявляются по скроллу
+  1501→   (ScrollTrigger слушает внутренний контейнер #world-scroll).
+  1502→   ============================================================ */
+  1503→const worldScroller = document.getElementById('world-scroll');
+  1504→const worldProgress = document.getElementById('world-progress');
+  1505→const wPortraitEl   = document.getElementById('w-portrait');
+  1506→const wNameEl       = document.getElementById('w-name');
+  1507→const wEpithetEl    = document.getElementById('w-epithet');
+  1508→const wYearsEl      = document.getElementById('w-years');
+  1509→const wIdeaEl       = document.getElementById('w-idea');
+  1510→const wQuoteEl      = document.getElementById('w-quote');
+  1511→const wQuoteSrcEl   = document.getElementById('w-quote-src');
+  1512→const wAlgoEl       = document.getElementById('w-algo');
+  1513→const wQuestionEl   = document.getElementById('w-question');
+  1514→const wIdxEl        = document.getElementById('w-idx');
+  1515→let   worldSTs = [];          // ScrollTrigger'ы мира (убиваются при выходе)
+  1516→let   worldIdx = 0;           // индекс философа, чей мир открыт
+  1517→
+  1518→// Имя по словам/буквам (как заголовок интро) — для анимации входа
+  1519→function splitChars(text){
+  1520→  return text.split(' ').map(w =>
+  1521→    `<span class="word">${[...w].map(c => `<span class="ch">${c}</span>`).join('')}</span>`
+  1522→  ).join(' ');
+  1523→}
+  1524→// Детерминированный ГПСЧ — звёзды портрета не «прыгают» между визитами
+  1525→function seeded(seed){
+  1526→  let s = (seed >>> 0) || 1;
+  1527→  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  1528→}
+  1529→
+  1530→/* --- Портреты философов: рисованный line-art (viewBox 150×180) ---
+  1531→   outline — контур головы/волос/бороды/плеч (толще),
+  1532→   detail  — черты лица (тоньше), eyes — зрачки (точки).
+  1533→   Каждый портрет узнаваем: борода Сократа, волосы Декарта,
+  1534→   лысина Канта, усы Ницше, венок Марка Аврелия, очки Сартра. */
+  1535→const PORTRAIT_ART = {
+  1536→  // Сократ: лысый купол, высокий лоб, курносый нос, большая кудрявая борода
+  1537→  socrates: {
+  1538→    outline: 'M48 86 C48 35 102 35 102 86 M48 92 C40 106 42 128 54 140 C62 149 88 149 96 140 C108 128 110 106 102 92 M34 172 C48 158 60 152 75 152 C90 152 102 158 116 172',
+  1539→    detail: 'M60 62 Q75 57 90 62 M62 70 Q75 66 88 70 M54 80 Q61 76 68 80 M82 80 Q89 76 96 80 M75 84 L72 98 Q74 103 80 100 M48 88 C43 90 43 98 49 100 M102 88 C107 90 107 98 101 100 M58 106 Q64 100 71 105 Q75 102 79 105 Q86 100 92 106 M69 118 Q75 121 81 118 M55 112 Q61 106 67 112 M83 112 Q89 106 95 112 M60 128 Q66 122 72 128 M78 128 Q84 122 90 128 M68 142 Q75 147 82 142',
+  1540→    eyes: [[61,87],[89,87]],
+  1541→  },
+  1542→  // Декарт: длинные волнистые волосы до плеч, тонкие усы, эспаньолка
+  1543→  descartes: {
+  1544→    outline: 'M58 60 C58 50 92 50 92 60 C96 70 97 86 95 100 C93 114 86 122 75 122 C64 122 57 114 55 100 C53 86 54 70 58 60 M46 84 C38 60 52 38 75 38 C98 38 112 60 104 84 M46 84 C37 94 35 110 38 124 C40 134 36 142 30 148 C40 150 48 143 50 132 M104 84 C113 94 115 110 112 124 C110 134 114 142 120 148 C110 150 102 143 100 132 M32 172 C46 158 58 152 75 152 C92 152 104 158 118 172',
+  1545→    detail: 'M58 56 C64 49 86 49 92 56 M44 94 C40 106 40 118 43 128 M106 94 C110 106 110 118 107 128 M57 74 Q63 70 69 74 M81 74 Q87 70 93 74 M75 82 L72 96 Q74 100 79 98 M63 104 Q69 100 74 103 Q75 102 76 103 Q81 100 87 104 M87 104 Q91 107 93 111 M63 104 Q59 107 57 111 M70 114 Q75 123 80 114 Q75 118 70 114',
+  1546→    eyes: [[63,80],[87,80]],
+  1547→  },
+  1548→  // Кант: высокий лысеющий лоб, пышные виски, второй подбородок, мягкие черты
+  1549→  kant: {
+  1550→    outline: 'M52 84 C52 44 98 44 98 84 M52 84 C46 88 44 100 46 110 C47 116 50 120 54 122 M98 84 C104 88 106 100 104 110 C103 116 100 120 96 122 M54 120 C59 130 66 136 75 136 C84 136 91 130 96 120 M62 141 Q75 148 88 141 M34 172 C48 160 60 154 75 154 C90 154 102 160 116 172',
+  1551→    detail: 'M62 66 Q75 61 88 66 M57 80 Q63 77 69 80 M81 80 Q87 77 93 80 M75 84 L72 98 Q74 102 79 100 M68 117 Q75 121 82 117 M58 103 Q61 107 59 111 M92 103 Q89 107 91 111',
+  1552→    eyes: [[63,86],[87,86]],
+  1553→  },
+  1554→  // Ницше: зачёсанные назад редеющие волосы, тяжёлые брови, огромные «моржовые» усы
+  1555→  nietzsche: {
+  1556→    outline: 'M54 88 C50 60 62 42 75 42 C88 42 100 60 96 88 M54 88 C53 100 55 112 62 122 C67 127 83 127 88 122 C95 112 97 100 96 88 M52 102 C58 94 68 98 75 101 C82 98 92 94 98 102 C101 111 94 120 86 117 C80 115 77 112 75 108 C73 112 70 115 64 117 C56 120 49 111 52 102 M32 172 C46 158 58 152 75 152 C92 152 104 158 118 172',
+  1557→    detail: 'M58 62 Q66 50 75 49 Q86 51 92 63 M60 58 Q70 46 82 46 M70 49 Q84 47 91 57 M55 78 L68 76 M82 76 L95 78 M75 82 L72 96 Q74 100 79 98 M75 104 C71 111 65 115 58 113 M75 104 C79 111 85 115 92 113 M68 126 Q75 130 82 126',
+  1558→    eyes: [[62,85],[88,85]],
+  1559→  },
+  1560→  // Марк Аврелий: лавровый венок (генерируется ниже), кудри, густая борода
+  1561→  marcus: {
+  1562→    outline: 'M52 86 C50 100 52 114 60 124 C66 131 84 131 90 124 C98 114 100 100 98 86 M50 80 Q54 68 61 74 Q65 63 72 70 Q76 62 80 69 Q87 62 91 70 Q97 64 100 80 M54 98 C50 116 56 134 68 141 C72 144 78 144 82 141 C94 134 100 116 96 98 M30 172 C46 156 60 150 75 150 C90 150 104 156 120 172',
+  1563→    detail: 'M57 82 Q63 79 69 82 M81 82 Q87 79 93 82 M75 86 L72 100 Q74 104 79 102 M62 108 Q68 102 74 107 Q75 105 76 107 Q82 102 88 108 M88 108 Q92 111 94 115 M62 108 Q58 111 56 115 M70 120 Q75 123 80 120 M60 112 Q65 106 70 112 M80 112 Q85 106 90 112 M64 128 Q69 122 74 128 M76 128 Q81 122 86 128 M69 140 Q75 145 81 140',
+  1564→    eyes: [[63,88],[87,88]],
+  1565→  },
+  1566→  // Сартр: круглые толстые очки, высокие залысины, крупные губы
+  1567→  sartre: {
+  1568→    outline: 'M53 76 C53 49 97 49 97 76 M53 76 C49 80 49 90 53 96 M97 76 C101 80 101 90 97 96 M53 78 C51 94 53 110 60 121 C66 128 84 128 90 121 C97 110 99 94 97 78 M34 172 C48 158 60 152 75 152 C90 152 102 158 116 172',
+  1569→    detail: 'M74 85 Q75 82 76 85 M49.5 86 L45 83 M100.5 86 L105 83 M75 92 L72 104 Q74 108 79 106 M63 116 Q68 112 74 115 Q75 114 76 115 Q82 112 87 116 M66 118 Q75 125 84 118 M51 90 C47 92 47 98 51 100 M99 90 C103 92 103 98 99 100',
+  1570→    extra: '<circle cx="62" cy="88" r="12.5" stroke-width="1.7"/><circle cx="88" cy="88" r="12.5" stroke-width="1.7"/>',
+  1571→    eyes: [[62,88],[88,88]],
+  1572→  },
+  1573→};
+  1574→
+  1575→// Лавровый венок Марка Аврелия: эллиптическая лента вокруг головы + листья — без картинок
+  1576→function laurelWreath(col){
+  1577→  const cx = 75, cy = 86, rx = 42, ry = 28;       // венок охватывает голову, верх касается волос
+  1578→  const a0 = 200, a1 = 340, N = 12;               // дуга над головой 200°…340°
+  1579→  const P = (aDeg, k = 1) => {
+  1580→    const a = aDeg * Math.PI / 180;
+  1581→    return [cx + rx * k * Math.cos(a), cy + ry * k * Math.sin(a)];
+  1582→  };
+  1583→  let s = '';
+  1584→  // лента венка — две дуги (наружная и внутренняя)
+  1585→  const [sx1, sy1] = P(a0), [ex1, ey1] = P(a1);
+  1586→  s += `<path d="M${sx1.toFixed(1)} ${sy1.toFixed(1)} A${rx} ${ry} 0 0 1 ${ex1.toFixed(1)} ${ey1.toFixed(1)}"/>`;
+  1587→  const [sx2, sy2] = P(a0, .87), [ex2, ey2] = P(a1, .87);
+  1588→  s += `<path d="M${sx2.toFixed(1)} ${sy2.toFixed(1)} A${(rx * .87).toFixed(1)} ${(ry * .87).toFixed(1)} 0 0 1 ${ex2.toFixed(1)} ${ey2.toFixed(1)}"/>`;
+  1589→  // листья-«линзы» вдоль ленты, слегка тонированные цветом философа
+  1590→  for (let i = 0; i <= N; i++){
+  1591→    const a  = (a0 + (a1 - a0) * i / N) * Math.PI / 180;
+  1592→    const px = cx + rx * Math.cos(a), py = cy + ry * Math.sin(a);
+  1593→    let tx = -rx * Math.sin(a), ty = ry * Math.cos(a);          // касательная к эллипсу
+  1594→    const tl = Math.hypot(tx, ty); tx /= tl; ty /= tl;
+  1595→    let nx = Math.cos(a) / rx, ny = Math.sin(a) / ry;           // нормаль наружу
+  1596→    const nl = Math.hypot(nx, ny); nx /= nl; ny /= nl;
+  1597→    const L = 9, Wd = 3.6;
+  1598→    const qx = px + tx * L, qy = py + ty * L;
+  1599→    s += `<path fill="${col}" fill-opacity=".14" stroke="none" d="M${(px + nx * 1.5).toFixed(1)} ${(py + ny * 1.5).toFixed(1)} Q${(px + nx * Wd).toFixed(1)} ${(py + ny * Wd).toFixed(1)} ${qx.toFixed(1)} ${qy.toFixed(1)} Q${(qx - nx * Wd * .5).toFixed(1)} ${(qy - ny * Wd * .5).toFixed(1)} ${(px + nx * 1.5).toFixed(1)} ${(py + ny * 1.5).toFixed(1)} Z"/>`;
+  1600→    s += `<path d="M${(px + nx * 1.5).toFixed(1)} ${(py + ny * 1.5).toFixed(1)} Q${(px + nx * Wd).toFixed(1)} ${(py + ny * Wd).toFixed(1)} ${qx.toFixed(1)} ${qy.toFixed(1)} Q${(qx - nx * Wd * .5).toFixed(1)} ${(qy - ny * Wd * .5).toFixed(1)} ${(px + nx * 1.5).toFixed(1)} ${(py + ny * 1.5).toFixed(1)} Z"/>`;
+  1601→  }
+  1602→  return s;
+  1603→}
+  1604→
+  1605→/* --- Сборка SVG-портрета: свечение → звёзды → венок → линии → глаза --- */
+  1606→function buildPortraitSVG(p, idx){
+  1607→  const col = p.color;
+  1608→  const art = PORTRAIT_ART[p.id];
+  1609→  const rnd = seeded(idx * 7919 + 17);
+  1610→  // фоновые звёзды вокруг головы (детерминированные — не «прыгают»)
+  1611→  let starDots = '';
+  1612→  for (let i = 0; i < 14; i++){
+  1613→    const a = rnd() * TAU, r = 30 + rnd() * 44;
+  1614→    starDots += `<circle cx="${(75 + Math.cos(a) * r).toFixed(1)}" cy="${(88 + Math.sin(a) * r * .92).toFixed(1)}" r="${(0.7 + rnd() * 0.9).toFixed(2)}" fill="${col}" opacity="${(0.16 + rnd() * .28).toFixed(2)}"/>`;
+  1615→  }
+  1616→  const laurel = p.id === 'marcus'
+  1617→    ? `<g stroke="${col}" fill="none" stroke-width="1.3" stroke-linejoin="round">${laurelWreath(col)}</g>` : '';
+  1618→  return `
+  1619→<svg viewBox="0 0 150 180" role="img" aria-label="Портрет: ${p.name}">
+  1620→  <defs>
+  1621→    <radialGradient id="pw-${idx}">
+  1622→      <stop offset="0" stop-color="${col}" stop-opacity=".20"/>
+  1623→      <stop offset=".65" stop-color="${col}" stop-opacity=".07"/>
+  1624→      <stop offset="1" stop-color="${col}" stop-opacity="0"/>
+  1625→    </radialGradient>
+  1626→  </defs>
+  1627→  <circle cx="75" cy="88" r="76" fill="url(#pw-${idx})"/>
+  1628→  <circle cx="75" cy="88" r="68" fill="none" stroke="${hexToRgba(col, .30)}" stroke-width="1"/>
+  1629→  <circle cx="75" cy="88" r="76" fill="none" stroke="${hexToRgba(col, .16)}" stroke-width="1" stroke-dasharray="2 7"/>
+  1630→  ${starDots}
+  1631→  ${laurel}
+  1632→  <g stroke="${col}" fill="none" stroke-linecap="round" stroke-linejoin="round">
+  1633→    <path d="${art.outline}" stroke-width="1.9"/>
+  1634→    <path d="${art.detail}" stroke-width="1.1" opacity=".92"/>
+  1635→    ${art.extra || ''}
+  1636→  </g>
+  1637→  <g fill="${col}" stroke="none">
+  1638→    ${art.eyes.map(e => `<circle cx="${e[0]}" cy="${e[1]}" r="2.1"/>`).join('')}
+  1639→  </g>
+  1640→  <g class="ws-orbit">
+  1641→    <circle cx="75" cy="12" r="5.5" fill="${col}" opacity=".22"/>
+  1642→    <circle cx="75" cy="12" r="2.3" fill="${col}"/>
+  1643→  </g>
+  1644→</svg>`;
+  1645→}
+  1646→
+  1647→/* --- Наполнение шаблона мира данными философа --- */
+  1648→function mountWorld(p, idx){
+  1649→  worldIdx = idx;
+  1650→  const ws = worldScreen.style;
+  1651→  ws.setProperty('--wc', p.color);
+  1652→  ws.setProperty('--wc-line', hexToRgba(p.color, .30));
+  1653→  ws.setProperty('--wc-bg',  hexToRgba(p.color, .10));
+  1654→  ws.background = `radial-gradient(1100px 720px at 50% 32%, ${hexToRgba(p.color, .15)}, transparent 68%), #0a0a0f`;
+  1655→  worldScreen.setAttribute('aria-label', `Мир философа: ${p.name}`);
+  1656→
+  1657→  wIdxEl.textContent      = `${String(idx + 1).padStart(2, '0')} / ${String(PHILOSOPHERS.length).padStart(2, '0')}`;
+  1658→  wEpithetEl.textContent  = p.epithet;
+  1659→  wYearsEl.textContent    = p.years;
+  1660→  wIdeaEl.textContent     = p.ideaFull;
+  1661→  wQuoteEl.textContent    = '«' + p.quote + '»';
+  1662→  wQuoteSrcEl.textContent = p.quoteSrc;
+  1663→  wAlgoEl.textContent     = p.algo;
+  1664→  wQuestionEl.textContent = p.question;
+  1665→  wNameEl.setAttribute('aria-label', p.name);
+  1666→  wNameEl.innerHTML = `<span aria-hidden="true">${splitChars(p.name)}</span>`;
+  1667→  wPortraitEl.innerHTML = buildPortraitSVG(p, idx);
+  1668→
+  1669→  worldScroller.scrollTop = 0;      // каждый мир начинается с начала
+  1670→  updateWorldProgress();
+  1671→}
+  1672→
+  1673→/* --- Линия чтения: сколько мира уже пройдено --- */
+  1674→function updateWorldProgress(){
+  1675→  const max = worldScroller.scrollHeight - worldScroller.clientHeight;
+  1676→  const k = max > 4 ? Math.min(1, worldScroller.scrollTop / max) : 0;
+  1677→  worldProgress.style.transform = `scaleX(${k})`;
+  1678→}
+  1679→worldScroller.addEventListener('scroll', updateWorldProgress, { passive: true });
+  1680→
+  1681→function killWorldST(){
+  1682→  worldSTs.forEach(t => t.kill());
+  1683→  worldSTs = [];
+  1684→}
+  1685→
+  1686→/* --- Показ мира: шапка анимируется, секции — по скроллу --- */
+  1687→function showWorld(p, idx){
+  1688→  mapScreen.hidden = true;
+  1689→  hideIntroNow();                                  // интро скрыто целиком (защита от «призрака» кнопок)
+  1690→  if (HAS_GSAP) gsap.set(mapSvg, { clearProps: 'transform' });   // сброс влёта под покровом вспышки
+  1691→  mountWorld(p, idx);
+  1692→  worldScreen.hidden = false;
+  1693→  worldScroller.scrollTop = 0;      // сброс на видимом контейнере: при display:none присваивание игнорируется
+  1694→  updateWorldProgress();
+  1695→  setAmbient(0.12, 0.16, 1.05, 1.6);
+  1696→  entering = false;
+  1697→
+  1698→  if (HAS_GSAP && !REDUCED){
+  1699→    gsap.fromTo(worldScreen, { opacity: 0 }, { opacity: 1, duration: .6, ease: 'power2.out' });
+  1700→    gsap.to(flash, { opacity: 0, duration: 1.1, delay: .25, ease: 'power2.out' });
+  1701→
+  1702→    // шапка: портрет → надзаголовок → имя по буквам → эпитет и годы
+  1703→    gsap.timeline({ delay: .12 })
+  1704→      .fromTo('#w-portrait', { scale: .84, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.1, ease: 'power3.out' })
+  1705→      .fromTo('.ws-kicker', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .6, ease: 'power2.out' }, .08)
+  1706→      .fromTo('#w-name .ch', { y: 26, opacity: 0, filter: 'blur(8px)' },
+  1707→        { y: 0, opacity: 1, filter: 'blur(0px)', duration: .8, stagger: .026, ease: 'power3.out' }, .16)
+  1708→      .fromTo(['#w-epithet', '#w-years'], { opacity: 0, y: 10 },
+  1709→        { opacity: 1, y: 0, duration: .7, stagger: .1, ease: 'power2.out' }, .5);
+  1710→
+  1711→    // секции мира: видимые — въезжают сразу, дальние — по скроллу
+  1712→    requestAnimationFrame(() => {
+  1713→      killWorldST();
+  1714→      const scR = worldScroller.getBoundingClientRect();
+  1715→      document.querySelectorAll('#world-screen .ws-reveal').forEach(el => {
+  1716→        const reveal = d => gsap.fromTo(el, { opacity: 0, y: 36 },
+  1717→          { opacity: 1, y: 0, duration: .9, ease: 'power3.out', delay: d });
+  1718→        const inView = el.getBoundingClientRect().top - scR.top < scR.height * .92;
+  1719→        if (inView || !HAS_ST){
+  1720→          reveal(.45);                                // уже в кадре — показать после шапки
+  1721→        } else if (HAS_ST){
+  1722→          worldSTs.push(ScrollTrigger.create({
+  1723→            trigger: el, scroller: worldScroller, start: 'top 90%', once: true,
+  1724→            onEnter: () => reveal(0)
+  1725→          }));
+  1726→        }
+  1727→      });
+  1728→      if (HAS_ST) ScrollTrigger.refresh();
+  1729→    });
+  1730→
+  1731→    setTimeout(() => document.getElementById('world-back2').focus({ preventScroll: true }), 1000);
+  1732→  } else {
+  1733→    flash.style.opacity = 0;
+  1734→  }
+  1735→}
+  1736→
+  1737→/* --- Назад: мир → карта (возвращает фокус на узел философа) --- */
+  1738→function backToMap(){
+  1739→  if (entering || worldScreen.hidden) return;
+  1740→  entering = true;
+  1741→  Sound.blip();
+  1742→  killWorldST();
+  1743→  setAmbient(0.3, 0.35, 1.15, 1.6);
+  1744→  if (HAS_GSAP && !REDUCED){
+  1745→    gsap.to(worldScreen, {
+  1746→      opacity: 0, duration: .45, ease: 'power2.in',
+  1747→      onComplete: () => { worldScreen.hidden = true; worldScreen.style.opacity = ''; showMap(false); focusMapNode(); }
+  1748→    });
+  1749→  } else {
+  1750→    worldScreen.hidden = true;
+  1751→    showMap(false);
+  1752→    focusMapNode();
+  1753→  }
+  1754→}
+  1755→function focusMapNode(){
+  1756→  const g = mapSvg.querySelector(`.map-node[data-i="${worldIdx}"]`);
+  1757→  if (g) g.focus({ preventScroll: true });
+  1758→}
+  1759→
+  1760→/* --- Назад: карта → интро --- */
+  1761→function mapToIntro(){
+  1762→  if (entering || mapScreen.hidden) return;
+  1763→  entering = true;                                 // до конца затухания карты клики/Escape заблокированы
+  1764→  Sound.blip();
+  1765→  hideCard();
+  1766→  setAmbient(1, 1, 1, 1.8);
+  1767→  if (HAS_GSAP && !REDUCED){
+  1768→    gsap.to(mapScreen, {
+  1769→      opacity: 0, duration: .55, ease: 'power2.in',
+  1770→      onComplete: () => { mapScreen.hidden = true; mapScreen.style.opacity = ''; entering = false; }
+  1771→    });
+  1772→  } else {
+  1773→    mapScreen.hidden = true;
+  1774→    entering = false;
+  1775→  }
+  1776→  revealIntro();                                   // интро возвращается целиком и без «хвостов»
+  1777→  introActive = true;
+  1778→}
+  1779→
+  1780→/* --- События карты: ховер, клик, клавиатура --- */
+  1781→mapSvg.addEventListener('mouseover', e => {
+  1782→  const g = e.target.closest('.map-node');
+  1783→  if (!g || entering) return;
+  1784→  g.classList.add('hot');
+  1785→  if (HAS_GSAP && !REDUCED) gsap.to(g, { scale: 1.22, duration: .35, ease: 'power2.out', overwrite: 'auto' });
+  1786→  showCard(g);
+  1787→});
+  1788→mapSvg.addEventListener('mouseout', e => {
+  1789→  const g = e.target.closest('.map-node');
+  1790→  if (!g || (e.relatedTarget && g.contains(e.relatedTarget))) return;
+  1791→  g.classList.remove('hot');
+  1792→  if (HAS_GSAP && !REDUCED) gsap.to(g, { scale: 1, duration: .4, ease: 'power2.out', overwrite: 'auto' });
+  1793→  hideCard();
+  1794→});
+  1795→mapSvg.addEventListener('click', e => {
+  1796→  const g = e.target.closest('.map-node');
+  1797→  if (!g) return;
+  1798→  flyToWorld(PHILOSOPHERS[+g.dataset.i], g);
+  1799→});
+  1800→mapSvg.addEventListener('keydown', e => {
+  1801→  if (e.key !== 'Enter' && e.key !== ' ') return;
+  1802→  const g = e.target.closest('.map-node');
+  1803→  if (!g) return;
+  1804→  e.preventDefault();
+  1805→  flyToWorld(PHILOSOPHERS[+g.dataset.i], g);
+  1806→});
+  1807→document.getElementById('world-back2').addEventListener('click', backToMap);
+  1808→document.getElementById('map-back').addEventListener('click', mapToIntro);
+  1809→window.addEventListener('keydown', e => {
+  1810→  if (e.key !== 'Escape' || entering) return;      // во время анимации перехода Escape игнорируется
+  1811→  if (!worldScreen.hidden) backToMap();
+  1812→  else if (!mapScreen.hidden) mapToIntro();
+  1813→});
+  1814→
+  1815→document.getElementById('enter-btn').addEventListener('click', () => {
+  1816→  // кнопка ведёт к случайному узлу — каждый вход чуть иной
+  1817→  enterTo(nodes[Math.floor(Math.random() * nodes.length)]);
+  1818→});
+  1819→
+  1820→/* ------------------------------------------------------------
+  1821→   ИНИЦИАЛИЗАЦИЯ
+  1822→   ------------------------------------------------------------ */
+  1823→buildTitle();
+  1824→resize();
+  1825→initStars();
+  1826→initParticles();
+  1827→buildMap();
+  1828→window.addEventListener('resize', () => { resize(); initStars(); updateMapViewBox(); });
+  1829→requestAnimationFrame(loop);
+  1830→requestAnimationFrame(tickPre);
+  1831→
+  1832→/* ------------------------------------------------------------
+  1833→   ТОЧКИ РАСШИРЕНИЯ · ЧАСТИ 3–4
+  1834→   Часть 3 (тест): 8 вопросов по одному на экран, прогресс-бар,
+  1835→     анимация «анализа», результат-философ. Точка входа — футер
+  1836→     мира (.ws-foot): добавить кнопку «Пройти тест» → showQuiz().
+  1837→   Часть 4 (финал): «Алгоритм предлагает. Выбираешь — ты».
+  1838→   Скролл внутри миров — нативный (#world-scroll); ScrollTrigger
+  1839→     уже слушает его (пример — reveal .ws-reveal в showWorld).
+  1840→   ------------------------------------------------------------ */
+  1841→</script>
+  1842→</body>
+  1843→</html>
+  1844→
