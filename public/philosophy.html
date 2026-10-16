@@ -10,18 +10,23 @@
 <!-- ============================================================
   ФИЛОСОФИЯ В ЭПОХУ АЛГОРИТМОВ
   Часть 0 · прелоадер + интро  |  Часть 1 · карта идей (SVG-граф)
-  Часть 2 · миры философов ×6  |  Часть 3 · тест  |  Часть 4 · финал (далее)
+  Часть 2 · миры философов ×6  |  Часть 3 · тест
+  Часть 3.5 · связи миров («Куда ведёт мысль?»), портал-разлом
+              между мирами, мини-карта прогресса, выход из теста
+  Часть 4 · финал (далее)
   ------------------------------------------------------------
   Структура файла:
     1. Шрифты (Inter — интерфейс, Cormorant — заголовки/цитаты)
     2. GSAP + ScrollTrigger через CDN (скролл используется только
        внутри миров — нативный контейнер, Lenis не нужен)
     3. CSS: переменные → курсор → прелоадер → сцена → интро
-       → звук → карта → мир философа → тест → адаптив → reduced-motion
+       → звук → карта → мир философа → тест → связи/портал/
+       мини-карта → адаптив → reduced-motion
     4. JS: конфиг → утилиты → canvas-мир (частицы/узлы/камера)
        → прелоадер → типографика → звук → курсор → GSAP-сцены
        → карта → мир философа (портреты line-art, ScrollTrigger)
-  Части 3–4 (тест, финал) подключаются в точках расширения —
+       → тест → связи миров, портал-разлом, мини-карта
+  Часть 4 (финал) подключается в точках расширения —
   ищите комментарий "ТОЧКИ РАСШИРЕНИЯ".
 ============================================================ -->
 
@@ -601,6 +606,134 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 }
 .link-btn:hover{ color:var(--gold); border-color:rgba(232,184,75,.55) }
 
+/* ==========================================================
+   7.8 · ЧАСТЬ 3.5: СВЯЗИ МИРА «КУДА ВЕДЁТ МЫСЛЬ?»,
+        ПОРТАЛ-РАЗЛОМ, МИНИ-КАРТА ПРОГРЕССА, ВЫХОД ИЗ ТЕСТА
+   ========================================================== */
+/* --- кнопка «выйти» на экране теста (левый верхний угол) --- */
+#quiz-close{
+  position:absolute; top:calc(18px + var(--safe-t)); left:20px; z-index:7;
+}
+
+/* --- «Куда ведёт мысль?» — карточки-порталы в другие миры ---
+   Цвет цели приходит из JS: --lc / --lc-line / --lc-bg        */
+.w-links{
+  display:flex; flex-wrap:wrap; justify-content:center;
+  gap:14px; margin-top:22px;
+}
+.w-link-card{
+  width:calc(50% - 7px); position:relative; overflow:hidden;
+  display:flex; flex-direction:column; align-items:center; gap:9px;
+  text-align:center; padding:22px 18px 20px; border-radius:18px; cursor:pointer;
+  border:1px solid var(--lc-line, rgba(237,237,242,.22));
+  background:linear-gradient(180deg, var(--lc-bg, rgba(237,237,242,.04)), rgba(10,10,15,.55));
+  transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+/* светлая кромка сверху — в тон рамки algo-карточки */
+.w-link-card::before{
+  content:''; position:absolute; top:0; left:10%; right:10%; height:1px;
+  background:linear-gradient(90deg, transparent, var(--lc), transparent); opacity:.55;
+}
+.w-link-card:hover{                               /* свечение + подъём -4px, 250мс */
+  transform:translateY(-4px);
+  border-color:var(--lc);
+  box-shadow:0 14px 34px rgba(0,0,0,.5), 0 0 26px var(--lc-line);
+}
+.w-link-card:active{ transform:translateY(-1px) }
+.w-link-card:last-child:nth-child(odd){ margin-left:auto; margin-right:auto }  /* 3-я — по центру снизу */
+.wlc-type{
+  display:flex; align-items:center; gap:8px;
+  font:500 9.5px/1 var(--sans); letter-spacing:.26em; text-indent:.26em;
+  text-transform:uppercase; color:var(--dim);
+}
+.wlc-ico{
+  font-size:13px; letter-spacing:0; text-indent:0;
+  font-family:"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif;
+}
+.wlc-name{ font:500 clamp(26px, 3vw, 34px)/1.1 var(--serif); color:var(--lc) }
+.wlc-lead{ font:300 12.5px/1.7 var(--sans); color:var(--dim); max-width:300px }
+.wlc-go{ margin-top:6px; border-color:var(--lc-line); color:rgba(237,237,242,.78) }
+.wlc-go:hover{ border-color:var(--lc); color:var(--ink) }
+
+/* --- мини-карта прогресса (правый верхний угол мира) ---
+   пройденные — залиты, текущий — пульсирует, прочие — контур */
+#mini-map{
+  position:absolute; top:calc(76px + var(--safe-t)); right:18px; z-index:7;
+  width:118px; padding:7px; border-radius:12px;
+  background:radial-gradient(130% 130% at 50% 50%, rgba(155,126,222,.05), rgba(10,10,15,.34));
+  border:1px solid rgba(237,237,242,.08); backdrop-filter:blur(4px);
+  opacity:.94;
+}
+#mini-svg{ display:block; width:100%; height:auto; overflow:visible }
+.mm-edge{ stroke:rgba(237,237,242,.16); stroke-width:10 }
+.mm-node{ cursor:pointer; outline:none }
+.mm-fill{ opacity:0; transition:opacity .35s }
+.mm-node:hover .mm-fill{ opacity:.35 }
+.mm-node.visited .mm-fill{ opacity:.9 }
+.mm-ring{ transition:stroke-width .3s }
+.mm-node:hover .mm-ring, .mm-node:focus-visible .mm-ring{ stroke-width:9 }
+.mm-node.cur .mm-ring{
+  animation:mmPulse 1.5s ease-in-out infinite;
+  transform-box:fill-box; transform-origin:center;
+}
+@keyframes mmPulse{ 0%,100%{ transform:scale(1); opacity:1 } 50%{ transform:scale(1.5); opacity:.5 } }
+/* всплывающее имя при ховере/фокусе узла */
+#mm-tip{
+  position:absolute; right:0; bottom:calc(100% + 10px); white-space:nowrap;
+  font:500 10px/1 var(--sans); letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink); background:rgba(12,12,20,.92);
+  border:1px solid var(--tc, rgba(237,237,242,.3)); border-radius:8px;
+  padding:8px 12px; opacity:0; transform:translateY(4px);
+  transition:opacity .25s, transform .25s; pointer-events:none;
+}
+#mini-map.show-tip #mm-tip{ opacity:1; transform:none }
+
+/* --- портал-разлом: переход мир → мир (управляется из portalTo) ---
+   #rift всегда в layout (visibility, а не display) — чтобы слепок
+   старого мира мог получить scrollTop до анимации               */
+#rift{ position:fixed; inset:0; z-index:26; pointer-events:none; visibility:hidden }
+#rift.on{ visibility:visible }
+/* половины старого мира (слепки), разъезжаются перпендикулярно диагонали */
+.rf-half{ position:absolute; inset:0; will-change:transform,opacity }
+.rf-l{ clip-path:polygon(0 0, 100% 0, 0 100%) }
+.rf-r{ clip-path:polygon(100% 0, 100% 100%, 0 100%) }
+.rf-clone{ position:absolute; inset:0 }
+/* свет, льющийся из разлома (градиент ставит JS в цвет цели) */
+.rf-light{ position:absolute; inset:0; opacity:0 }
+/* трещина: SVG-линия по диагонали, свечение через drop-shadow */
+.rf-crack{
+  position:absolute; inset:0; width:100%; height:100%; overflow:visible;
+  filter:drop-shadow(0 0 12px currentColor);
+}
+.rf-crack path{ fill:none; stroke:currentColor; stroke-linecap:round }
+.rf-crack-glow{ stroke-width:18; opacity:.22 }
+.rf-crack-core{ stroke-width:2.4; opacity:.95 }
+.rf-crack .rf-crack-hot{ stroke:#fff; stroke-width:1; opacity:.85 }
+.rf-flash{ position:absolute; inset:0; opacity:0 }
+/* точка «схлопывания» мира при возврате на карту */
+#warp-dot{
+  position:fixed; left:0; top:0; z-index:32; width:14px; height:14px;
+  border-radius:50%; background:#fff; pointer-events:none; opacity:0;
+}
+
+@media (max-width:768px){
+  #quiz-close{ top:calc(14px + var(--safe-t)); left:14px }
+  #mini-map{ top:calc(74px + var(--safe-t)); right:14px; width:96px }
+}
+@media (max-width:640px){
+  .w-link-card{ width:100% }                      /* мобила: карточки в столбик */
+  /* на мобиле контент идёт во всю ширину — мини-карта становится
+     «призрачной», чтобы не перекрывать текст карточек при скролле */
+  #mini-map{ background:transparent; border-color:transparent; backdrop-filter:none; opacity:.5 }
+}
+@media (max-width:480px){
+  #mini-map{ top:calc(62px + var(--safe-t)); right:10px; width:78px }
+  #quiz-close{ padding:11px 16px; font-size:10px }
+  .w-link-card{ padding:18px 14px 16px }
+  .wlc-lead{ max-width:none }
+  .ws-inner{ padding-top:clamp(118px, 15.5vh, 150px) }  /* зазор под мини-карту */
+}
+
 /* Статичное раскрытие контента (reduced motion или нет GSAP) */
 .reveal-static .overtitle,
 .reveal-static #enter-btn,
@@ -737,6 +870,16 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   -->
   <section id="world-screen" hidden aria-label="Мир философа">
     <div id="world-progress" aria-hidden="true"></div>
+
+    <!-- МИНИ-КАРТА ПРОГРЕССА (часть 3.5): пройденные миры — залиты
+         цветом, текущий — пульсирует, прочие — контуром. Ховер —
+         имя, клик — переход через «портал-разлом» (portalTo).
+         Узлы/рёбра строит buildMiniMap() из PHILOSOPHERS + EDGES. -->
+    <div id="mini-map" role="group" aria-label="Мини-карта прогресса: пройденные миры">
+      <div id="mm-tip" aria-hidden="true"></div>
+      <svg id="mini-svg" viewBox="0 0 1200 700" aria-label="Мини-карта связей философов"></svg>
+    </div>
+
     <div id="world-scroll">
       <div class="ws-inner">
         <div class="kicker ws-kicker">Мир философа · <span id="w-idx">01 / 06</span></div>
@@ -763,6 +906,14 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
           </div>
         </section>
 
+        <!-- ЧАСТЬ 3.5 · «КУДА ВЕДЁТ МЫСЛЬ?» — карточки-порталы в
+             другие миры (строит buildLinks() из LINKS; клик по
+             карточке запускает переход «портал-разлом») -->
+        <section class="ws-sec ws-reveal" aria-label="Куда ведёт мысль">
+          <h3 class="ws-label">Куда ведёт мысль?</h3>
+          <div class="w-links" id="w-links"></div>
+        </section>
+
         <footer class="ws-foot ws-reveal">
           <div class="ws-foot-btns">
             <button id="world-back2" class="ghost-btn" data-hover>← К карте</button>
@@ -779,7 +930,8 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
     Восемь вопросов (QUIZ) по одному на экран, затем «анализ» от
     лица алгоритма и результат: родственный философ + шесть голосов
     + индекс автономии. Вход: ссылка под картой (#map-quiz) или
-    футер мира (#world-quiz). Выход: «← К карте» / Escape.
+    футер мира (#world-quiz). Выход: «✕ Выйти» (#quiz-close),
+    «← К карте» на результате или Escape.
   -->
   <section id="quiz-screen" hidden aria-label="Тест: кто принимает твои решения">
     <div id="quiz-progress" aria-hidden="true"></div>
@@ -831,6 +983,10 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
         </div>
       </div>
     </div>
+
+    <!-- Кнопка выхода из теста (часть 3.5): доступна на любом шаге
+         теста — вопрос, «анализ» или результат -->
+    <button id="quiz-close" class="ghost-btn" data-hover aria-label="Выйти из теста и вернуться к карте">✕&nbsp;Выйти</button>
   </section>
 </main>
 
@@ -839,6 +995,28 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 
 <!-- 3D-сетка «горизонт» (рисуется только во время влёта в узел) -->
 <canvas id="grid3d" aria-hidden="true"></canvas>
+
+<!--
+  ПОРТАЛ-РАЗЛОМ (часть 3.5): переход между мирами по карточкам
+  «Куда ведёт мысль?» и мини-карте. Слева-направо по слоям:
+  половины старого мира (слепки .rf-clone в .rf-half) → свет из
+  разлома → светящаяся трещина по диагонали → финальная вспышка.
+  Всю хореографию ведёт portalTo() на GSAP (~1000мс).
+-->
+<div id="rift" aria-hidden="true">
+  <div class="rf-half rf-l"><div class="rf-clone"></div></div>
+  <div class="rf-half rf-r"><div class="rf-clone"></div></div>
+  <div class="rf-light"></div>
+  <svg class="rf-crack" viewBox="0 0 100 100" preserveAspectRatio="none">
+    <path class="rf-crack-glow" d="M0 0 L100 100" pathLength="100"/>
+    <path class="rf-crack-core" d="M0 0 L100 100" pathLength="100"/>
+    <path class="rf-crack-hot"  d="M0 0 L100 100" pathLength="100"/>
+  </svg>
+  <div class="rf-flash"></div>
+</div>
+
+<!-- Точка «схлопывания» мира при возврате на карту (backToMap) -->
+<div id="warp-dot" aria-hidden="true"></div>
 
 <!-- Кастомный курсор -->
 <div id="cursor-dot" aria-hidden="true"></div>
@@ -941,6 +1119,66 @@ const PHILOSOPHERS = [
 ];
 // Линии-связи между узлами (индексы PHILOSOPHERS) — «созвездие»
 const EDGES = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[1,5],[2,5],[0,4]];
+
+/* --- Прогресс прохождения миров (localStorage — живёт между сессиями) --- */
+const PROG_KEY = 'philosophy-visited-v1';
+function loadVisited(){
+  try { const v = JSON.parse(localStorage.getItem(PROG_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+  catch(e){ return []; }
+}
+function saveVisited(v){ try { localStorage.setItem(PROG_KEY, JSON.stringify(v)); } catch(e){} }
+function markVisited(id){
+  const v = loadVisited();
+  if (!v.includes(id)){ v.push(id); saveVisited(v); }
+}
+
+// Быстрый доступ к философу по id: PH.kant, PH.sartre…
+const PH = {};
+PHILOSOPHERS.forEach(p => PH[p.id] = p);
+
+/* --- Связи миров «Куда ведёт мысль?» (часть 3.5) ---
+   type — тип связи (иконка + слово + подпись кнопки),
+   to   — id философа-цели (имя и цвет берутся из PHILOSOPHERS),
+   text — строка-подводка на карточке. */
+const LINK_TYPES = {
+  sporit:         { ico: '⚔️', label: 'Спорит',        btn: 'Возразить' },
+  prodolzhaet:    { ico: '🧩', label: 'Продолжает',    btn: 'Шагнуть сквозь' },
+  ottalkivaetsya: { ico: '🌱', label: 'Отталкивается', btn: 'Шагнуть сквозь' },
+  pereklikaetsya: { ico: '🔄', label: 'Перекликается', btn: 'Шагнуть сквозь' },
+  somnevaetsya:   { ico: '🕳️', label: 'Сомневается',   btn: 'Шагнуть сквозь' },
+};
+const LINKS = {
+  socrates: [
+    { to: 'kant',      type: 'sporit',         text: 'Ты требуешь закона от себя. А кто сказал, что закон — это ответ?' },
+    { to: 'marcus',    type: 'pereklikaetsya', text: 'Он тоже искал покой. Но нашёл его в суждении, а не в вопросе.' },
+    { to: 'nietzsche', type: 'ottalkivaetsya', text: 'Ницше говорил: Сократ убил трагедию. Проверь.' },
+  ],
+  descartes: [
+    { to: 'kant',      type: 'prodolzhaet',    text: 'Сомнение Декарта стало фундаментом. Кант построил на нём дом.' },
+    { to: 'socrates',  type: 'somnevaetsya',   text: 'Сократ сомневался в знании. Декарт — в самом бытии.' },
+    { to: 'nietzsche', type: 'sporit',         text: 'Ницше: "Я мыслю" — это ещё не всё. Надо ещё хотеть.' },
+  ],
+  kant: [
+    { to: 'nietzsche', type: 'sporit',         text: 'Ницше считал Канта моралистом стада. Проверь, прав ли он.' },
+    { to: 'sartre',    type: 'prodolzhaet',    text: 'Автономия Канта стала свободой Сартра.' },
+    { to: 'descartes', type: 'pereklikaetsya', text: 'Оба искали основание. Один — в мысли, другой — в долге.' },
+  ],
+  nietzsche: [
+    { to: 'kant',      type: 'sporit',         text: 'Мораль стада против сверхчеловека. Кто прав?' },
+    { to: 'sartre',    type: 'prodolzhaet',    text: 'Ницше сказал: Бог умер. Сартр сказал: теперь выбирай сам.' },
+    { to: 'socrates',  type: 'ottalkivaetsya', text: 'Сократ искал истину в диалоге. Ницше — в себе.' },
+  ],
+  marcus: [
+    { to: 'socrates',  type: 'pereklikaetsya', text: 'Оба знали: главное — суждение, а не событие.' },
+    { to: 'sartre',    type: 'ottalkivaetsya', text: 'Аврелий принимал судьбу. Сартр — выбирал её.' },
+    { to: 'kant',      type: 'prodolzhaet',    text: 'Долг у стоиков стал долгом у Канта.' },
+  ],
+  sartre: [
+    { to: 'nietzsche', type: 'prodolzhaet',    text: 'Сверхчеловек стал свободным человеком.' },
+    { to: 'kant',      type: 'sporit',         text: 'Кант: закон внутри. Сартр: никакого закона, только выбор.' },
+    { to: 'marcus',    type: 'pereklikaetsya', text: 'Оба про ответственность. Но один — про принятие, другой — про выбор.' },
+  ],
+};
 
 const REDUCED      = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const FINE_POINTER = window.matchMedia('(pointer: fine)').matches;
@@ -1955,6 +2193,10 @@ function mountWorld(p, idx){
   wNameEl.innerHTML = `<span aria-hidden="true">${splitChars(p.name)}</span>`;
   wPortraitEl.innerHTML = buildPortraitSVG(p, idx);
 
+  buildLinks(p);                    // карточки «Куда ведёт мысль?» (часть 3.5)
+  markVisited(p.id);                // прогресс миров — в localStorage
+  refreshMiniMap();                 // состояния мини-карты: пройден / текущий
+
   worldScroller.scrollTop = 0;      // каждый мир начинается с начала
   updateWorldProgress();
 }
@@ -1972,6 +2214,44 @@ function killWorldST(){
   worldSTs = [];
 }
 
+/* --- Вход в мир: шапка + reveal-секции ---
+   Общая функция: используется и в showWorld (влёт с карты),
+   и в портале «разлома» (часть 3.5) после подмены мира. */
+function runWorldEntrance(){
+  if (!HAS_GSAP || REDUCED) return;
+
+  // шапка: портрет → надзаголовок → имя по буквам → эпитет и годы
+  gsap.timeline({ delay: .12 })
+    .fromTo('#w-portrait', { scale: .84, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.1, ease: 'power3.out' })
+    .fromTo('.ws-kicker', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .6, ease: 'power2.out' }, .08)
+    .fromTo('#w-name .ch', { y: 26, opacity: 0, filter: 'blur(8px)' },
+      { y: 0, opacity: 1, filter: 'blur(0px)', duration: .8, stagger: .026, ease: 'power3.out' }, .16)
+    .fromTo(['#w-epithet', '#w-years'], { opacity: 0, y: 10 },
+      { opacity: 1, y: 0, duration: .7, stagger: .1, ease: 'power2.out' }, .5);
+
+  // секции мира: видимые — въезжают сразу, дальние — по скроллу
+  requestAnimationFrame(() => {
+    killWorldST();
+    const scR = worldScroller.getBoundingClientRect();
+    document.querySelectorAll('#world-screen .ws-reveal').forEach(el => {
+      const reveal = d => gsap.fromTo(el, { opacity: 0, y: 36 },
+        { opacity: 1, y: 0, duration: .9, ease: 'power3.out', delay: d });
+      const inView = el.getBoundingClientRect().top - scR.top < scR.height * .92;
+      if (inView || !HAS_ST){
+        reveal(.45);                                // уже в кадре — показать после шапки
+      } else if (HAS_ST){
+        worldSTs.push(ScrollTrigger.create({
+          trigger: el, scroller: worldScroller, start: 'top 90%', once: true,
+          onEnter: () => reveal(0)
+        }));
+      }
+    });
+    if (HAS_ST) ScrollTrigger.refresh();
+  });
+
+  setTimeout(() => document.getElementById('world-back2').focus({ preventScroll: true }), 1000);
+}
+
 /* --- Показ мира: шапка анимируется, секции — по скроллу --- */
 function showWorld(p, idx){
   mapScreen.hidden = true;
@@ -1987,53 +2267,76 @@ function showWorld(p, idx){
   if (HAS_GSAP && !REDUCED){
     gsap.fromTo(worldScreen, { opacity: 0 }, { opacity: 1, duration: .6, ease: 'power2.out' });
     gsap.to(flash, { opacity: 0, duration: 1.1, delay: .25, ease: 'power2.out' });
-
-    // шапка: портрет → надзаголовок → имя по буквам → эпитет и годы
-    gsap.timeline({ delay: .12 })
-      .fromTo('#w-portrait', { scale: .84, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.1, ease: 'power3.out' })
-      .fromTo('.ws-kicker', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .6, ease: 'power2.out' }, .08)
-      .fromTo('#w-name .ch', { y: 26, opacity: 0, filter: 'blur(8px)' },
-        { y: 0, opacity: 1, filter: 'blur(0px)', duration: .8, stagger: .026, ease: 'power3.out' }, .16)
-      .fromTo(['#w-epithet', '#w-years'], { opacity: 0, y: 10 },
-        { opacity: 1, y: 0, duration: .7, stagger: .1, ease: 'power2.out' }, .5);
-
-    // секции мира: видимые — въезжают сразу, дальние — по скроллу
-    requestAnimationFrame(() => {
-      killWorldST();
-      const scR = worldScroller.getBoundingClientRect();
-      document.querySelectorAll('#world-screen .ws-reveal').forEach(el => {
-        const reveal = d => gsap.fromTo(el, { opacity: 0, y: 36 },
-          { opacity: 1, y: 0, duration: .9, ease: 'power3.out', delay: d });
-        const inView = el.getBoundingClientRect().top - scR.top < scR.height * .92;
-        if (inView || !HAS_ST){
-          reveal(.45);                                // уже в кадре — показать после шапки
-        } else if (HAS_ST){
-          worldSTs.push(ScrollTrigger.create({
-            trigger: el, scroller: worldScroller, start: 'top 90%', once: true,
-            onEnter: () => reveal(0)
-          }));
-        }
-      });
-      if (HAS_ST) ScrollTrigger.refresh();
-    });
-
-    setTimeout(() => document.getElementById('world-back2').focus({ preventScroll: true }), 1000);
+    runWorldEntrance();
   } else {
     flash.style.opacity = 0;
   }
 }
 
-/* --- Назад: мир → карта (возвращает фокус на узел философа) --- */
+/* --- Назад: мир → карта (возвращает фокус на узел философа) ---
+   ЧАСТЬ 3.5, новая хореография: мир «схлопывается» в точку цвета
+   философа → точка перелетает на карту → карта проявляется, узел
+   философа пульсирует ~1с.                                        */
+const warpDotEl = document.getElementById('warp-dot');
+
+/* Экранная позиция узла карты (с учётом текущего viewBox —
+   на узких экранах он «приближен») */
+function mapNodeScreenPos(i){
+  const r  = mapSvg.getBoundingClientRect();
+  const vb = mapSvg.viewBox.baseVal;
+  const k  = Math.min(r.width / vb.width, r.height / vb.height);
+  const p  = PHILOSOPHERS[i];
+  return {
+    x: r.left + (r.width  - vb.width  * k) / 2 + (p.mx - vb.x) * k,
+    y: r.top  + (r.height - vb.height * k) / 2 + (p.my - vb.y) * k,
+  };
+}
+
+/* Пульс узла на большой карте (~1с) после «прилёта» точки */
+function pulseMapNode(i){
+  const g = mapSvg.querySelector(`.map-node[data-i="${i}"]`);
+  if (!g || !HAS_GSAP || REDUCED) return;
+  const ring = g.querySelector('.node-ring');
+  const glow = g.querySelector('.node-glow');
+  if (ring) gsap.fromTo(ring, { attr: { 'stroke-width': 2.2 } }, {
+    attr: { 'stroke-width': 7 }, duration: .25, repeat: 3, yoyo: true,
+    ease: 'sine.inOut', onComplete: () => gsap.set(ring, { attr: { 'stroke-width': 1.2 } })
+  });
+  if (glow) gsap.fromTo(glow, { opacity: 1 }, { opacity: .72, duration: 1.1, ease: 'power1.out' });
+}
+
 function backToMap(){
   if (entering || worldScreen.hidden) return;
   entering = true;
   Sound.blip();
   killWorldST();
+  const col = PHILOSOPHERS[worldIdx].color;
   setAmbient(0.3, 0.35, 1.15, 1.6);
   if (HAS_GSAP && !REDUCED){
+    // 1) мир схлопывается в точку (к центру экрана)
     gsap.to(worldScreen, {
-      opacity: 0, duration: .45, ease: 'power2.in',
-      onComplete: () => { worldScreen.hidden = true; worldScreen.style.opacity = ''; showMap(false); focusMapNode(); }
+      scale: .001, opacity: 0, duration: .5, ease: 'power3.in', transformOrigin: '50% 50%',
+      onComplete: () => {
+        worldScreen.hidden = true; worldScreen.style.opacity = '';
+        gsap.set(worldScreen, { clearProps: 'transform' });
+        // 2) точка цвета философа вспыхивает и летит к своему узлу
+        warpDotEl.style.background = '#fff';
+        warpDotEl.style.boxShadow  = `0 0 16px #fff, 0 0 44px ${col}, 0 0 96px ${hexToRgba(col, .7)}`;
+        gsap.set(warpDotEl, { left: W / 2, top: H / 2, xPercent: -50, yPercent: -50, scale: .5, opacity: 1 });
+        showMap(false);                              // карта проявляется под полётом точки
+        entering = true;                             // showMap сбросил entering — держим блокировку до прилёта
+        const dest = mapNodeScreenPos(worldIdx);
+        gsap.to(warpDotEl, {
+          left: dest.x, top: dest.y, scale: 1.15, duration: .55, ease: 'power2.inOut',
+          onComplete: () => {
+            // 3) вспышка точки + пульс узла на карте (~1с)
+            gsap.to(warpDotEl, { scale: 3.6, opacity: 0, duration: .38, ease: 'power2.out' });
+            pulseMapNode(worldIdx);
+            focusMapNode();
+            entering = false;
+          }
+        });
+      }
     });
   } else {
     worldScreen.hidden = true;
@@ -2044,6 +2347,253 @@ function backToMap(){
 function focusMapNode(){
   const g = mapSvg.querySelector(`.map-node[data-i="${worldIdx}"]`);
   if (g) g.focus({ preventScroll: true });
+}
+
+/* ============================================================
+   9.5 · ЧАСТЬ 3.5 — СВЯЗИ МИРА, МИНИ-КАРТА ПРОГРЕССА, ПОРТАЛ
+   ============================================================ */
+
+/* --- «Куда ведёт мысль?»: карточки-порталы (LINKS → DOM) --- */
+const wLinksEl = document.getElementById('w-links');
+function buildLinks(p){
+  wLinksEl.innerHTML = '';
+  (LINKS[p.id] || []).forEach(l => {
+    const t = PH[l.to];
+    if (!t) return;
+    const type = LINK_TYPES[l.type] || LINK_TYPES.prodolzhaet;
+    const card = document.createElement('article');
+    card.className = 'w-link-card';
+    card.setAttribute('data-hover', '');
+    card.style.setProperty('--lc', t.color);                       // цвет философа-цели
+    card.style.setProperty('--lc-line', hexToRgba(t.color, .34));
+    card.style.setProperty('--lc-bg',  hexToRgba(t.color, .07));
+    card.innerHTML = `
+      <div class="wlc-type"><span class="wlc-ico" aria-hidden="true">${type.ico}</span><span>${type.label}</span></div>
+      <div class="wlc-name"></div>
+      <p class="wlc-lead"></p>
+      <button type="button" class="ghost-btn wlc-go" data-hover aria-label="${type.label}. Перейти в мир: ${t.name}"><span class="wlc-go-t"></span><span aria-hidden="true">&nbsp;→</span></button>`;
+    card.querySelector('.wlc-name').textContent = t.name;
+    card.querySelector('.wlc-lead').textContent = l.text;
+    card.querySelector('.wlc-go-t').textContent = type.btn;
+    // клик в любом месте карточки (включая кнопку) = переход-портал
+    card.addEventListener('click', () => portalTo(t, l.type));
+    wLinksEl.appendChild(card);
+  });
+}
+
+/* --- Мини-карта прогресса: 6 узлов в углу мира --- */
+const miniMapEl = document.getElementById('mini-map');
+const miniSvg   = document.getElementById('mini-svg');
+const mmTip     = document.getElementById('mm-tip');
+
+function buildMiniMap(){
+  let html = '';
+  // рёбра — те же связи, что и на большой карте
+  EDGES.forEach(([a, b]) => {
+    const A = PHILOSOPHERS[a], B = PHILOSOPHERS[b];
+    html += `<line class="mm-edge" x1="${A.mx}" y1="${A.my}" x2="${B.mx}" y2="${B.my}"/>`;
+  });
+  // узлы: прозрачная «зона клика» + заливка (пройден) + кольцо (контур/пульс)
+  PHILOSOPHERS.forEach((p, i) => {
+    html += `<g class="mm-node" data-i="${i}" data-hover="" tabindex="0" role="button" aria-label="Перейти в мир: ${p.name}">` +
+      `<circle class="mm-hit"  cx="${p.mx}" cy="${p.my}" r="80" fill="transparent"/>` +
+      `<circle class="mm-fill" cx="${p.mx}" cy="${p.my}" r="32" fill="${p.color}"/>` +
+      `<circle class="mm-ring" cx="${p.mx}" cy="${p.my}" r="32" fill="none" stroke="${p.color}" stroke-width="5"/>` +
+    `</g>`;
+  });
+  miniSvg.innerHTML = html;
+}
+function refreshMiniMap(){
+  const visited = loadVisited();
+  miniSvg.querySelectorAll('.mm-node').forEach(g => {
+    const i = +g.dataset.i;
+    const cur = i === worldIdx;
+    g.classList.toggle('visited', visited.includes(PHILOSOPHERS[i].id));
+    g.classList.toggle('cur', cur);
+    g.setAttribute('aria-current', cur ? 'true' : 'false');
+  });
+}
+/* всплывающее имя при ховере и фокусе */
+function mmShowTip(g){
+  const p = PHILOSOPHERS[+g.dataset.i];
+  mmTip.textContent = p.name;
+  mmTip.style.setProperty('--tc', p.color);
+  miniMapEl.classList.add('show-tip');
+}
+miniSvg.addEventListener('mouseover', e => {
+  const g = e.target.closest('.mm-node');
+  if (g) mmShowTip(g);
+});
+miniSvg.addEventListener('mouseout', e => {
+  const g = e.target.closest('.mm-node');
+  if (g && (!e.relatedTarget || !g.contains(e.relatedTarget))) miniMapEl.classList.remove('show-tip');
+});
+miniSvg.addEventListener('focusin', e => {
+  const g = e.target.closest('.mm-node');
+  if (g) mmShowTip(g);
+});
+miniSvg.addEventListener('focusout', () => miniMapEl.classList.remove('show-tip'));
+/* клик / Enter — переход в тот мир через тот же «портал-разлом» */
+function mmGo(i){
+  if (entering || i === worldIdx || worldScreen.hidden) return;
+  Sound.blip();
+  portalTo(PHILOSOPHERS[i], null);          // null — нейтральный переход, без shake
+}
+miniSvg.addEventListener('click', e => {
+  const g = e.target.closest('.mm-node');
+  if (g) mmGo(+g.dataset.i);
+});
+miniSvg.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const g = e.target.closest('.mm-node');
+  if (!g) return;
+  e.preventDefault();
+  mmGo(+g.dataset.i);
+});
+
+/* --- ПОРТАЛ-РАЗЛОМ: переход мир → мир (~1000мс, GSAP) ---
+   0–150мс   текущий мир замирает (scale 1 → 1.02)
+   150–450мс по диагонали пробегает светящаяся трещина
+             (SVG stroke-dashoffset, цвет = философ-цель, свечение
+             через filter: drop-shadow; «Спорит» — shake 2–3px)
+   450–650мс разлом расширяется: ядро толще, из щели льётся свет
+   650–900мс половины старого мира разъезжаются, за разломом
+             проявляется новый мир (fade + scale 0.98 → 1)
+   900–1000мс финальная вспышка (opacity .3 → 0)
+   prefers-reduced-motion / без GSAP — простой фейд ~300мс.      */
+const riftEl   = document.getElementById('rift');
+const rfHalves = riftEl.querySelectorAll('.rf-half');
+const rfClones = riftEl.querySelectorAll('.rf-clone');
+const rfLight  = riftEl.querySelector('.rf-light');
+const rfCrack  = riftEl.querySelector('.rf-crack');
+const rfGlowP  = riftEl.querySelector('.rf-crack-glow');
+const rfCoreP  = riftEl.querySelector('.rf-crack-core');
+const rfHotP   = riftEl.querySelector('.rf-crack-hot');
+const rfPaths  = riftEl.querySelectorAll('.rf-crack path');
+const rfFlash  = riftEl.querySelector('.rf-flash');
+
+/* Подготовка слоёв разлома под цвет философа-цели */
+function prepareRift(color){
+  gsap.killTweensOf([rfHalves, rfClones, rfLight, rfFlash, rfCrack, rfPaths]);
+  riftEl.style.color = color;                     // currentColor для трещины
+  // viewBox = точные пиксели экрана: 1:1 без искажений — иначе
+  // растянутый viewBox + pathLength рисуют трещину «сегментами»
+  rfCrack.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  rfPaths.forEach(p => {
+    p.setAttribute('d', `M0 0 L${W} ${H}`);       // диагональ сверху-слева вниз-вправо
+    p.style.strokeDasharray = 100;                // pathLength=100 → вся линия
+    p.style.strokeDashoffset = 100;
+  });
+  rfLight.style.background =
+    `radial-gradient(85% 70% at 50% 50%, ${hexToRgba(color, .38)}, ${hexToRgba(color, .12)} 42%, transparent 68%)`;
+  rfFlash.style.background =
+    `radial-gradient(circle at 50% 50%, rgba(255,255,255,.95) 0%, ${hexToRgba(color, .55)} 55%, ${hexToRgba(color, 0)} 80%)`;
+  gsap.set(rfHalves, { xPercent: 0, yPercent: 0, opacity: 1 });
+  gsap.set(rfLight, { opacity: 0 });
+  gsap.set(rfFlash, { opacity: 0 });
+  gsap.set(rfCrack, { opacity: 1 });
+  gsap.set(rfGlowP, { attr: { 'stroke-width': 18 }, opacity: .22 });
+  gsap.set(rfCoreP, { attr: { 'stroke-width': 2.4 }, opacity: .95 });
+  gsap.set(rfHotP,  { opacity: .85 });
+  riftEl.classList.add('on');
+}
+
+/* Слепок старого мира в обе половины. Снимок делается в момент
+   разлома — с текущим скроллом и замиранием (scale 1.02), поэтому
+   подмена визуально бесшовная. Градиенты портрета получают свои
+   id (rf-…), чтобы цвет не «перекрасился» после mountWorld.      */
+function buildGhostClones(){
+  const clone = worldScreen.cloneNode(true);
+  const sc = clone.querySelector('#world-scroll');
+  if (sc) sc.scrollTop = worldScroller.scrollTop; // та же позиция чтения
+  clone.querySelectorAll('radialGradient[id]').forEach(g => {
+    const old = g.id, nw = 'rf-' + old;
+    g.id = nw;
+    clone.querySelectorAll(`[fill="url(#${old})"]`).forEach(el => el.setAttribute('fill', `url(#${nw})`));
+  });
+  clone.style.visibility = 'visible';
+  clone.style.opacity = '1';
+  rfClones[0].innerHTML = '';
+  rfClones[0].appendChild(clone);
+  rfClones[1].innerHTML = '';
+  rfClones[1].appendChild(clone.cloneNode(true));
+}
+
+/* Подмена мира под покровом разлома: реальный экран получает
+   контент нового философа и стартует с fade + scale 0.98 → 1 */
+function splitSwap(target, tIdx){
+  buildGhostClones();
+  worldScreen.style.visibility = 'hidden';        // сцена переходит к половинам-слепкам
+  mountWorld(target, tIdx);                       // новый мир уже под разломом
+  worldScreen.style.visibility = 'visible';
+  gsap.set(worldScreen, { opacity: 0, scale: .98, x: 0 });
+}
+
+/* Лёгкий shake 2–3px, ~200мс — для связей типа «Спорит» */
+function shakeScreen(){
+  gsap.fromTo(worldScreen, { x: -3 }, {
+    x: 3, duration: .05, repeat: 3, yoyo: true, ease: 'none',
+    onComplete: () => gsap.set(worldScreen, { x: 0 })
+  });
+}
+
+/* Очистка слоёв портала после перехода */
+function finishPortal(){
+  riftEl.classList.remove('on');
+  rfClones.forEach(el => el.innerHTML = '');
+  gsap.set(rfHalves, { clearProps: 'all' });
+  gsap.set(worldScreen, { opacity: 1, clearProps: 'transform' });
+  entering = false;
+}
+
+/* Фолбэк: reduced-motion / без GSAP — простой фейд ~300мс */
+function fadeSwapWorld(target, tIdx){
+  if (HAS_GSAP){
+    gsap.to(worldScreen, { opacity: 0, duration: .15, ease: 'power1.in', onComplete: () => {
+      mountWorld(target, tIdx);
+      gsap.to(worldScreen, { opacity: 1, duration: .18, ease: 'power1.out',
+        onComplete: () => { entering = false; } });
+    }});
+  } else {
+    mountWorld(target, tIdx);
+    entering = false;
+  }
+}
+
+/* Сам переход «портал-разлом» (карточки связей + мини-карта) */
+function portalTo(target, type){
+  if (entering || worldScreen.hidden) return;
+  if (PHILOSOPHERS[worldIdx].id === target.id) return;
+  const tIdx = PHILOSOPHERS.indexOf(target);
+  entering = true;
+  killWorldST();
+  Sound.blip();
+  if (HAS_GSAP && !REDUCED){
+    Sound.whoosh();
+    prepareRift(target.color);
+    gsap.to(worldScreen, { scale: 1.02, duration: .15, ease: 'power1.out' });  // 0–150: замирание
+    gsap.timeline()
+      .to(rfPaths, { strokeDashoffset: 0, duration: .3, ease: 'power2.inOut' }, .15)   // 150–450: трещина
+      .add(() => { if (type === 'sporit') shakeScreen(); }, .17)
+      .to(rfLight, { opacity: 1, duration: .2, ease: 'power1.out' }, .45)              // 450–650: свет из разлома
+      .to(rfGlowP, { opacity: .8, attr: { 'stroke-width': 34 }, duration: .2, ease: 'power1.out' }, .45)
+      .to(rfCoreP, { attr: { 'stroke-width': 7 }, duration: .2, ease: 'power1.out' }, .45)
+      .add(() => splitSwap(target, tIdx), .65)                                         // 650–900: разъезд половин
+      .to(rfHalves, {
+        xPercent: i => (i === 0 ? -46 : 46),           // перпендикулярно диагонали
+        yPercent: i => (i === 0 ?  46 : -46),
+        duration: .25, ease: 'power3.in'
+      }, .65)
+      .to(rfHalves, { opacity: 0, duration: .18, ease: 'power1.out' }, .78)
+      .to(rfLight, { opacity: 0, duration: .25, ease: 'power1.out' }, .68)
+      .to(rfCrack, { opacity: 0, duration: .18, ease: 'power1.out' }, .78)
+      .to(worldScreen, { opacity: 1, scale: 1, duration: .3, ease: 'power2.out' }, .68) // новый мир: fade + 0.98→1
+      .add(() => runWorldEntrance(), .68)
+      .fromTo(rfFlash, { opacity: .32 }, { opacity: 0, duration: .18, ease: 'power1.out' }, .9) // 900–1000: вспышка
+      .add(finishPortal, 1.02);
+  } else {
+    fadeSwapWorld(target, tIdx);
+  }
 }
 
 /* --- Назад: карта → интро --- */
@@ -2465,6 +3015,7 @@ function restartQuiz(){
 document.getElementById('map-quiz').addEventListener('click', openQuiz);
 document.getElementById('world-quiz').addEventListener('click', openQuiz);
 document.getElementById('qz-back').addEventListener('click', closeQuiz);
+document.getElementById('quiz-close').addEventListener('click', closeQuiz);   // «✕ Выйти» — выход с любого шага теста (часть 3.5)
 document.getElementById('qz-again').addEventListener('click', restartQuiz);
 document.getElementById('qz-skip').addEventListener('click', () => { clearQuizTimers(); showResult(); });
 
@@ -2476,6 +3027,7 @@ resize();
 initStars();
 initParticles();
 buildMap();
+buildMiniMap();                   // мини-карта прогресса в мирах (часть 3.5)
 window.addEventListener('resize', () => { resize(); initStars(); updateMapViewBox(); });
 requestAnimationFrame(loop);
 requestAnimationFrame(tickPre);
@@ -2485,11 +3037,15 @@ requestAnimationFrame(tickPre);
    Финал: «Алгоритм предлагает. Выбираешь — ты» — финальный
      экран-манифест (после теста и карты): тезисы, шкала
      «алгоритм ⇄ ты», финальная фраза слогана.
-   Точки входа: результат теста (кнопку «← К карте» можно
-     заменить/дополнить «К финалу»), футер мира, подвал карты.
+   Точки входа: результат теста (#qz-actions), футер мира
+     (.ws-foot-btns), подвал карты (.map-foot). Из финала можно
+     вернуться на карту (showMap) или в мир (showWorld).
+   Готовые механики части 3.5: карточки связей (LINKS → buildLinks),
+     переход «портал-разлом» (portalTo), мини-карта прогресса
+     (#mini-svg, localStorage), возврат «точкой» (backToMap).
    Скролл внутри миров/теста — нативный (#world-scroll,
    #quiz-scroll); ScrollTrigger уже настроен (пример —
-   reveal .ws-reveal в showWorld).
+   reveal .ws-reveal в runWorldEntrance).
    ------------------------------------------------------------ */
 </script>
 </body>
