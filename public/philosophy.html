@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0f">
+<title>Философия в эпоху алгоритмов — карта великих идей</title>
+<meta name="description" content="Интерактивное путешествие по великим идеям философии. Сквозной вопрос: кто принимает твои решения — ты или алгоритм?">
+
+<!-- ============================================================
+  ФИЛОСОФИЯ В ЭПОХУ АЛГОРИТМОВ · ЧАСТЬ 0 (прелоадер + интро)
+  ------------------------------------------------------------
+  Структура файла:
+    1. Шрифты (Inter — интерфейс, Cormorant — заголовки/цитаты)
+    2. GSAP + ScrollTrigger через CDN (Lenis подключим в части 1,
+       когда появится скролл — строка уже заготовлена ниже)
+    3. CSS: переменные → курсор → прелоадер → сцена → интро
+       → звук → плейсхолдер части 1 → адаптив → reduced-motion
+    4. JS: конфиг → утилиты → canvas-мир (частицы/узлы/камера)
+       → прелоадер → типографика → звук → курсор → GSAP-сцены
+  Части 1–4 (карта, миры философов, тест, финал) подключаются
+  в точках расширения — ищите комментарий "ТОЧКИ РАСШИРЕНИЯ".
+============================================================ -->
+
+<!-- Шрифты Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- GSAP: ядро + ScrollTrigger (нужен с части 1 для скролл-анимаций) -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<!-- ЧАСТЬ 1: плавный скролл — раскомментируйте вместе с картой
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script> -->
+
+<style>
+/* ==========================================================
+   0. ПЕРЕМЕННЫЕ И СБРОС
+   ========================================================== */
+:root{
+  --bg:      #0a0a0f;                 /* фон вселенной */
+  --ink:     #EDEDF2;                 /* основной текст */
+  --dim:     rgba(237,237,242,.55);   /* приглушённый текст */
+  --accent:  #9B7EDE;                 /* неоновый фиолетовый (Кант) */
+  --gold:    #E8B84B;                 /* тёплый акцент (Сократ) */
+  --sans:    'Inter', system-ui, -apple-system, sans-serif;
+  --serif:   'Cormorant', Georgia, serif;
+  --safe-t:  env(safe-area-inset-top, 0px);
+  --safe-b:  env(safe-area-inset-bottom, 0px);
+}
+*,*::before,*::after{ box-sizing:border-box; margin:0; padding:0 }
+html,body{ height:100% }
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  overflow:hidden;                /* часть 0 — один экран; часть 1 включит скролл */
+  -webkit-font-smoothing:antialiased;
+}
+::selection{ background:rgba(155,126,222,.35); color:#fff }
+button{ font-family:inherit; touch-action:manipulation }
+:focus-visible{ outline:1px solid var(--accent); outline-offset:4px; border-radius:4px }
+
+/* ==========================================================
+   1. КАСТОМНЫЙ КУРСОР (только десктоп, pointer:fine)
+   ========================================================== */
+html.has-cursor, html.has-cursor *{ cursor:none !important }
+#cursor-dot,#cursor-ring{
+  position:fixed; top:0; left:0; z-index:120;
+  pointer-events:none; border-radius:50%; opacity:0;
+}
+#cursor-dot{ width:6px; height:6px; background:var(--ink); box-shadow:0 0 12px rgba(237,237,242,.8) }
+#cursor-ring{
+  width:36px; height:36px; border:1px solid rgba(237,237,242,.35);
+  transition:opacity .3s, width .25s ease, height .25s ease,
+             border-color .25s, background .25s, box-shadow .25s;
+}
+#cursor-ring.is-hover{
+  width:58px; height:58px;
+  border-color:rgba(155,126,222,.9);
+  background:rgba(155,126,222,.07);
+  box-shadow:0 0 26px rgba(155,126,222,.22);
+}
+#cursor-ring.is-down{ width:26px; height:26px }
+html.cursor-on #cursor-dot, html.cursor-on #cursor-ring{ opacity:1 }
+
+/* ==========================================================
+   2. ПРЕЛОАДЕР
+   ========================================================== */
+#preloader{
+  position:fixed; inset:0; z-index:100; background:var(--bg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px;
+  transition:opacity .65s ease, visibility 0s linear .65s;
+}
+#preloader.done{ opacity:0; visibility:hidden }
+.pre-node{
+  width:10px; height:10px; border-radius:50%;
+  background:var(--accent);
+  box-shadow:0 0 18px var(--accent), 0 0 52px rgba(155,126,222,.55);
+  animation:prePulse 1.5s ease-in-out infinite;
+}
+@keyframes prePulse{
+  0%,100%{ transform:scale(1); opacity:.65 }
+  50%    { transform:scale(1.9); opacity:1 }
+}
+.pre-counter{
+  font:300 12px/1 var(--sans); letter-spacing:.4em; text-indent:.4em;
+  color:var(--dim); font-variant-numeric:tabular-nums;
+}
+.pre-line{ width:180px; height:1px; background:rgba(237,237,242,.12); overflow:hidden }
+.pre-line span{
+  display:block; height:100%; transform:scaleX(0); transform-origin:left;
+  background:linear-gradient(90deg, var(--accent), var(--gold));
+}
+
+/* ==========================================================
+   3. СЦЕНА И ХОЛСТ
+   ========================================================== */
+#scene{ position:fixed; inset:0; overflow:hidden; background:var(--bg) }
+#cosmos{ position:absolute; inset:0; display:block; width:100%; height:100% }
+
+/* Вспышка zoom-перехода (цвет подставляется из JS под узел философа) */
+#flash{
+  position:fixed; inset:0; z-index:30; pointer-events:none; opacity:0;
+  transition:opacity .2s linear;
+}
+
+/* ==========================================================
+   4. ЭКРАН 0 · ИНТРО
+   ========================================================== */
+#intro{
+  position:absolute; inset:0; z-index:10;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:0 20px;
+  pointer-events:none;             /* клики проходят к canvas (узлы) */
+}
+/* надзаголовок */
+.overtitle{
+  display:flex; align-items:center; gap:18px; margin-bottom:36px;
+  font:500 11px/1 var(--sans); letter-spacing:.42em; text-indent:.42em;
+  text-transform:uppercase; color:var(--dim); opacity:0;
+}
+.overtitle .line{
+  width:56px; height:1px; display:inline-block; transform-origin:right center;
+  background:linear-gradient(90deg, transparent, rgba(237,237,242,.4));
+}
+.overtitle .line:last-child{
+  transform-origin:left center;
+  background:linear-gradient(90deg, rgba(237,237,242,.4), transparent);
+}
+/* заголовок */
+#title{
+  font:500 clamp(44px, 7.2vw, 108px)/1.06 var(--serif);
+  letter-spacing:.01em; color:var(--ink);
+  text-shadow:0 0 70px rgba(155,126,222,.28);
+  margin-bottom:30px;
+}
+#title .word{ display:inline-block; white-space:nowrap }
+#title .ch{ display:inline-block; will-change:transform,opacity }
+/* слово «алгоритмов» — неоновый градиент */
+#title .accent{
+  background:linear-gradient(94deg, #9B7EDE 15%, #E5484D 90%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow:none;
+}
+/* слоган с эффектом печати */
+#slogan{
+  font:400 clamp(15px, 1.8vw, 20px)/1.7 var(--sans);
+  letter-spacing:.02em; color:var(--dim);
+  min-height:1.7em; margin-bottom:44px;
+}
+#slogan .caret{
+  display:inline-block; width:2px; height:1.12em; margin-left:3px;
+  vertical-align:-.18em; background:var(--gold);
+  box-shadow:0 0 10px rgba(232,184,75,.9); opacity:0;
+}
+body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
+@keyframes caret{ 0%,49%{opacity:1} 50%,100%{opacity:0} }
+/* кнопка входа */
+#enter-btn{
+  pointer-events:auto; position:relative;
+  appearance:none; background:rgba(155,126,222,.06);
+  border:1px solid rgba(155,126,222,.55); border-radius:999px;
+  color:var(--ink); font:500 12px/1 var(--sans);
+  letter-spacing:.32em; text-indent:.32em; text-transform:uppercase;
+  padding:21px 40px;
+  opacity:0; transform:translateY(26px);
+  transition:background .35s, border-color .35s, box-shadow .35s, color .35s;
+}
+#enter-btn:hover{
+  background:rgba(155,126,222,.15);
+  border-color:rgba(200,180,255,.95);
+  box-shadow:0 0 36px rgba(155,126,222,.4), inset 0 0 18px rgba(155,126,222,.12);
+}
+#enter-btn .arr{ display:inline-block; margin-left:4px; transition:transform .35s }
+#enter-btn:hover .arr{ transform:translateX(6px) }
+#enter-btn .glow{
+  position:absolute; inset:-1px; border-radius:inherit; pointer-events:none;
+  box-shadow:0 0 26px rgba(155,126,222,.45); opacity:.2;
+  animation:btnGlow 2.8s ease-in-out infinite;
+}
+@keyframes btnGlow{ 0%,100%{opacity:.12} 50%{opacity:.55} }
+/* подсказка внизу */
+#hint{
+  position:absolute; left:0; right:0; bottom:calc(30px + var(--safe-b));
+  font:300 11px/1.6 var(--sans); letter-spacing:.22em; text-indent:.22em;
+  text-transform:uppercase; color:rgba(237,237,242,.35);
+  opacity:0; padding:0 24px;
+}
+
+/* ==========================================================
+   5. КНОПКА ЗВУКА
+   ========================================================== */
+#mute-btn{
+  position:fixed; top:calc(20px + var(--safe-t)); right:20px; z-index:40;
+  width:46px; height:46px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid rgba(237,237,242,.16);
+  background:rgba(10,10,15,.55); backdrop-filter:blur(8px);
+  color:var(--dim); opacity:0;
+  transition:color .3s, border-color .3s, box-shadow .3s;
+}
+#mute-btn:hover{ color:var(--ink); border-color:rgba(155,126,222,.65); box-shadow:0 0 20px rgba(155,126,222,.25) }
+#mute-btn .on{ display:none }
+#mute-btn.unmuted .on{ display:block }
+#mute-btn.unmuted .off{ display:none }
+
+/* ==========================================================
+   6. ПЛЕЙСХОЛДЕР ЧАСТИ 1 (после zoom-перехода)
+   ========================================================== */
+#next-part{
+  position:absolute; inset:0; z-index:20;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:24px;
+  background:rgba(10,10,15,.68); backdrop-filter:blur(3px);
+}
+#next-part[hidden]{ display:none }
+.np-kicker{
+  font:500 11px/1 var(--sans); letter-spacing:.4em; text-indent:.4em;
+  text-transform:uppercase; color:var(--gold);
+}
+.np-title{
+  font:500 clamp(34px, 4.6vw, 64px)/1.12 var(--serif);
+  color:var(--ink); margin:16px 0 34px;
+}
+.np-chips{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:660px; margin-bottom:30px }
+.np-chip{
+  display:flex; align-items:center; gap:9px;
+  padding:10px 17px; border:1px solid rgba(237,237,242,.12); border-radius:999px;
+  font:400 12px/1 var(--sans); letter-spacing:.08em; color:var(--dim);
+  transition:border-color .3s, color .3s, box-shadow .3s;
+}
+.np-chip i{
+  width:7px; height:7px; border-radius:50%;
+  background:var(--c); box-shadow:0 0 10px var(--c);
+}
+.np-chip:hover{ border-color:var(--c); color:var(--ink); box-shadow:0 0 18px rgba(237,237,242,.08) }
+.np-note{
+  font:300 12.5px/1.9 var(--sans); color:rgba(237,237,242,.42);
+  max-width:480px; margin-bottom:40px;
+}
+.np-note em{ color:rgba(237,237,242,.7); font-style:italic }
+#back-btn{
+  appearance:none; background:transparent; border:1px solid rgba(237,237,242,.25);
+  border-radius:999px; color:var(--dim);
+  font:500 11px/1 var(--sans); letter-spacing:.28em; text-indent:.28em; text-transform:uppercase;
+  padding:16px 32px;
+  transition:color .3s, border-color .3s, background .3s;
+}
+#back-btn:hover{ color:var(--ink); border-color:rgba(237,237,242,.6); background:rgba(237,237,242,.05) }
+
+/* Статичное раскрытие контента (reduced motion или нет GSAP) */
+.reveal-static .overtitle,
+.reveal-static #enter-btn,
+.reveal-static #hint,
+.reveal-static #mute-btn{ opacity:1 }
+.reveal-static #enter-btn{ transform:none }
+
+/* ==========================================================
+   7. АДАПТИВ: 1440 / 1024 / 768 / 480
+   ========================================================== */
+@media (max-width:1024px){
+  #title{ margin-bottom:26px }
+}
+@media (max-width:768px){
+  .overtitle{ letter-spacing:.3em; text-indent:.3em; gap:12px }
+  .overtitle .line{ width:34px }
+  #enter-btn{ padding:19px 32px }
+  .np-note{ margin-bottom:32px }
+}
+@media (max-width:480px){
+  .overtitle{ margin-bottom:26px }
+  #title{ margin-bottom:22px }
+  #slogan{ min-height:3.4em; margin-bottom:34px }  /* запас под 2 строки */
+  #enter-btn{ padding:17px 26px; font-size:11px }
+  #mute-btn{ width:42px; height:42px; top:calc(14px + var(--safe-t)); right:14px }
+  #hint{ letter-spacing:.14em }
+  .np-chip{ padding:9px 14px; font-size:11px }
+}
+
+/* ==========================================================
+   8. ДОСТУПНОСТЬ: prefers-reduced-motion
+   ========================================================== */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001s !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.15s !important;
+  }
+}
+</style>
+</head>
+<body>
+<noscript>
+  <p style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#EDEDF2;font-family:sans-serif;text-align:center;padding:24px">
+    Для путешествия по карте великих идей необходим JavaScript.
+  </p>
+</noscript>
+
+<!-- ПРЕЛОАДЕР -->
+<div id="preloader" role="status" aria-label="Загрузка">
+  <div class="pre-node" aria-hidden="true"></div>
+  <div class="pre-counter">0%</div>
+  <div class="pre-line" aria-hidden="true"><span></span></div>
+</div>
+
+<!-- КНОПКА ЗВУКА -->
+<button id="mute-btn" data-hover aria-label="Включить или выключить звук" aria-pressed="false">
+  <!-- звук выключен -->
+  <svg class="off" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M11 5 6 9H2v6h4l5 4V5z"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>
+  </svg>
+  <!-- звук включён -->
+  <svg class="on" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9.4 9.4 0 0 1 0 13"/>
+  </svg>
+</button>
+
+<main id="scene">
+  <!-- Холст: частицы, узлы, связи, звёзды (всё рисуется здесь) -->
+  <canvas id="cosmos" aria-hidden="true"></canvas>
+
+  <!-- ЭКРАН 0 · ИНТРО -->
+  <section id="intro">
+    <div class="overtitle">
+      <span class="line" aria-hidden="true"></span>
+      <span>Карта великих идей</span>
+      <span class="line" aria-hidden="true"></span>
+    </div>
+    <h1 id="title" aria-label="Философия в эпоху алгоритмов"></h1>
+    <p id="slogan" aria-label="Алгоритм уже знает, что ты выберешь. А ты?">
+      <span id="slogan-text" aria-hidden="true"></span><span class="caret" aria-hidden="true"></span>
+    </p>
+    <button id="enter-btn" data-hover>Войти в карту<span class="arr" aria-hidden="true">&nbsp;→</span><span class="glow" aria-hidden="true"></span></button>
+    <p id="hint">Кликните по узлу — каждый ведёт в свой мир</p>
+  </section>
+
+  <!--
+    ТОЧКА РАСШИРЕНИЯ · ЧАСТЬ 1
+    Здесь вместо плейсхолдера появится SVG-карта из 6 миров.
+  -->
+  <section id="next-part" hidden>
+    <div class="np-kicker np-in">Часть 1 · Следующий экран</div>
+    <h2 class="np-title np-in">Карта великих идей</h2>
+    <div class="np-chips np-in">
+      <span class="np-chip" style="--c:#E8B84B"><i aria-hidden="true"></i>Сократ</span>
+      <span class="np-chip" style="--c:#6FA8DC"><i aria-hidden="true"></i>Декарт</span>
+      <span class="np-chip" style="--c:#9B7EDE"><i aria-hidden="true"></i>Кант</span>
+      <span class="np-chip" style="--c:#E5484D"><i aria-hidden="true"></i>Ницше</span>
+      <span class="np-chip" style="--c:#7FB88A"><i aria-hidden="true"></i>Марк Аврелий</span>
+      <span class="np-chip" style="--c:#D9885F"><i aria-hidden="true"></i>Сартр</span>
+    </div>
+    <p class="np-note np-in">
+      Здесь появится интерактивный граф из шести миров философов.
+      Сквозной вопрос путешествия: <em>«Кто принимает твои решения — ты или алгоритм?»</em>
+    </p>
+    <button id="back-btn" class="np-in" data-hover>← Вернуться к интро</button>
+  </section>
+</main>
+
+<!-- Вспышка zoom-перехода -->
+<div id="flash" aria-hidden="true"></div>
+
+<!-- Кастомный курсор -->
+<div id="cursor-dot" aria-hidden="true"></div>
+<div id="cursor-ring" aria-hidden="true"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   JS · ЧАСТЬ 0: ПРЕЛОАДЕР + ИНТРО
+   Разделы:
+     1. Конфиг и утилиты
+     2. Canvas-мир: частицы, узлы, связи, звёзды, камера
+     3. Прелоадер
+     4. Типографика (заголовок по буквам, печатная машинка)
+     5. Звук (Web Audio, без внешних файлов)
+     6. Кастомный курсор
+     7. GSAP-сцены: интро → zoom-переход → плейсхолдер
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1. КОНФИГ И УТИЛИТЫ
+   ------------------------------------------------------------ */
+const TITLE  = 'Философия в эпоху алгоритмов';
+const SLOGAN = 'Алгоритм уже знает, что ты выберешь. А ты?';
+
+// Шесть философов — координаты узлов в долях экрана (0..1)
+const PHILOSOPHERS = [
+  { id:'socrates',  name:'Сократ',       color:'#E8B84B', x:0.16, y:0.32 },
+  { id:'descartes', name:'Декарт',       color:'#6FA8DC', x:0.50, y:0.14 },
+  { id:'kant',      name:'Кант',         color:'#9B7EDE', x:0.85, y:0.38 },
+  { id:'nietzsche', name:'Ницше',        color:'#E5484D', x:0.72, y:0.82 },
+  { id:'marcus',    name:'Марк Аврелий', color:'#7FB88A', x:0.14, y:0.78 },
+  { id:'sartre',    name:'Сартр',        color:'#D9885F', x:0.42, y:0.62 },
+];
+// Линии-связи между узлами (индексы PHILOSOPHERS) — «созвездие»
+const EDGES = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[1,5],[2,5],[0,4]];
+
+const REDUCED      = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FINE_POINTER = window.matchMedia('(pointer: fine)').matches;
+const HAS_GSAP     = typeof window.gsap !== 'undefined';
+if (HAS_GSAP && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger); // пригодится в части 1
+
+const TAU  = Math.PI * 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+const rand = (min, max) => min + Math.random() * (max - min);
+
+// #E8B84B + 0.5 -> 'rgba(232,184,75,0.5)'
+function hexToRgba(hex, a = 1){
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+
+/* ------------------------------------------------------------
+   2. CANVAS-МИР
+   Мировые координаты = экранные при z = 1.
+   Камера: z — зум, x/y — мировая точка в центре экрана,
+   px/py — параллакс от мыши (гаснет при зуме).
+   ------------------------------------------------------------ */
+const canvas = document.getElementById('cosmos');
+const ctx    = canvas.getContext('2d');
+let W = 0, H = 0, DPR = 1, time = 0, framePar = 1;
+
+const cam = { x: 0, y: 0, z: 1, px: 0, py: 0 };
+
+// Состояние мира (твинов GSAP)
+const worldState = { edge: 0, node: 0 };   // прозрачность связей и узлов
+let introActive = false;
+let entering    = false;                    // идёт zoom-переход
+let hoverNode   = null;
+
+/* --- Свечения: рисуем спрайтами (offscreen canvas) — быстро --- */
+function makeGlow(color){
+  const s = 96, c = document.createElement('canvas');
+  c.width = c.height = s;
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(s/2, s/2, 0, s/2, s/2, s/2);
+  grd.addColorStop(0.00, hexToRgba(color, .85));
+  grd.addColorStop(0.22, hexToRgba(color, .32));
+  grd.addColorStop(0.55, hexToRgba(color, .08));
+  grd.addColorStop(1.00, 'rgba(0,0,0,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, s, s);
+  return c;
+}
+const sprites = {};
+PHILOSOPHERS.forEach(p => sprites[p.id] = makeGlow(p.color));
+const spriteNeutral = makeGlow('#9AA6DC');   // нейтральные частицы
+
+/* --- Узлы-философы --- */
+const nodes = PHILOSOPHERS.map((p, i) => ({
+  ...p, i, px: 0, py: 0,          // px/py — экранные координаты
+  hover: false, labelA: 0,        // плавное появление подписи
+  pulse: rand(0, TAU),            // фаза пульсации
+}));
+function clusterR(){ return Math.max(22, Math.min(44, Math.min(W, H) * 0.045)); }
+
+/* --- Частицы --- */
+const particles = [];
+function initParticles(){
+  particles.length = 0;
+  const total = Math.round(Math.min(240, Math.max(90, (W * H) / 6000)));
+  for (let i = 0; i < total; i++){
+    const colored = Math.random() < 0.5;                 // половина — «цветные»
+    const node = colored ? Math.floor(rand(0, 6)) : -1;  // летят к своему узлу
+    particles.push({
+      fx: rand(0, W), fy: rand(0, H),                    // свободный дрейф
+      vx: rand(-0.12, 0.12), vy: rand(-0.12, 0.12),
+      r: rand(0.6, 1.9),
+      sprite: node >= 0 ? sprites[PHILOSOPHERS[node].id] : spriteNeutral,
+      node,
+      baseAng: rand(0, TAU),                             // орбита вокруг узла
+      radF: 0.1 + Math.sqrt(Math.random()) * 0.9,        // радиус орбиты (доля)
+      orbSpeed: rand(0.08, 0.3) * (Math.random() < .5 ? -1 : 1),
+      tw: rand(0.4, 1.4), ph: rand(0, TAU),              // мерцание
+      assemble: REDUCED ? 1 : 0,                         // 0 = хаос, 1 = в узле
+      x: 0, y: 0,
+    });
+  }
+}
+
+/* --- Далёкие звёзды (экранное пространство, не летят при зуме) --- */
+const stars = [];
+function initStars(){
+  stars.length = 0;
+  const n = Math.round(W * H / 26000);
+  for (let i = 0; i < n; i++){
+    stars.push({ x: Math.random(), y: Math.random(), r: rand(0.4, 1.1), tw: rand(0.5, 2), ph: rand(0, TAU) });
+  }
+}
+
+/* --- Размеры --- */
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  nodes.forEach(n => { n.px = n.x * W; n.py = n.y * H; });
+  if (cam.z === 1){ cam.x = W / 2; cam.y = H / 2; }
+}
+
+/* --- Шаг физики частиц --- */
+function stepParticles(){
+  for (const p of particles){
+    p.fx += p.vx; p.fy += p.vy;                       // свободный дрейф
+    if (p.fx < -20) p.fx = W + 20; if (p.fx > W + 20) p.fx = -20;
+    if (p.fy < -20) p.fy = H + 20; if (p.fy > H + 20) p.fy = -20;
+    if (p.node >= 0){
+      const n = nodes[p.node];
+      const ang = p.baseAng + time * p.orbSpeed;      // медленная орбита
+      const rad = p.radF * clusterR();
+      const tx = n.px + Math.cos(ang) * rad;
+      const ty = n.py + Math.sin(ang) * rad * 0.82;   // слегка сплюснуто
+      p.x = lerp(p.fx, tx, p.assemble);               // assemble твинит GSAP
+      p.y = lerp(p.fy, ty, p.assemble);
+    } else { p.x = p.fx; p.y = p.fy; }
+  }
+}
+
+/* --- Рендер --- */
+function draw(){
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, W, H);
+
+  // звёзды фона
+  for (const s of stars){
+    const a = 0.05 + 0.2 * (0.5 + 0.5 * Math.sin(time * s.tw + s.ph));
+    ctx.fillStyle = `rgba(210,218,245,${a})`;
+    ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, TAU); ctx.fill();
+  }
+
+  // параллакс гаснет при зуме
+  framePar = 1 - Math.min(1, (cam.z - 1) / 3);
+
+  ctx.save();
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(cam.z, cam.z);
+  ctx.translate(-(cam.x + cam.px * framePar), -(cam.y + cam.py * framePar));
+
+  drawEdges();
+  drawParticleLinks();
+  drawParticles();
+  drawNodes();
+
+  ctx.restore();
+}
+
+// линии-связи между шестью узлами
+function drawEdges(){
+  if (worldState.edge <= 0.01) return;
+  ctx.lineWidth = 1 / cam.z;                        // всегда волосяная линия
+  for (const [i, j] of EDGES){
+    const a = nodes[i], b = nodes[j];
+    const g = ctx.createLinearGradient(a.px, a.py, b.px, b.py);
+    g.addColorStop(0, hexToRgba(a.color, 0.36 * worldState.edge * framePar));
+    g.addColorStop(1, hexToRgba(b.color, 0.36 * worldState.edge * framePar));
+    ctx.strokeStyle = g;
+    ctx.beginPath(); ctx.moveTo(a.px, a.py); ctx.lineTo(b.px, b.py); ctx.stroke();
+  }
+}
+
+// «созвездие»: тонкие линии между близкими частицами
+const LINK_DIST = 100, LINK_DIST2 = LINK_DIST * LINK_DIST;
+function drawParticleLinks(){
+  if (worldState.edge <= 0.01 || cam.z > 2.5) return;   // при зуме пропускаем
+  ctx.lineWidth = 1 / cam.z;
+  for (let i = 0; i < particles.length; i++){
+    const p = particles[i];
+    for (let j = i + 1; j < particles.length; j++){
+      const q = particles[j];
+      const dx = p.x - q.x; if (dx > LINK_DIST || dx < -LINK_DIST) continue;
+      const dy = p.y - q.y; if (dy > LINK_DIST || dy < -LINK_DIST) continue;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < LINK_DIST2){
+        const a = (1 - Math.sqrt(d2) / LINK_DIST) * 0.12 * worldState.edge * framePar;
+        ctx.strokeStyle = `rgba(154,166,220,${a})`;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+      }
+    }
+  }
+}
+
+function drawParticles(){
+  for (const p of particles){
+    const twinkle = 0.65 + 0.35 * Math.sin(time * p.tw + p.ph);
+    const s = p.r * 7;                                 // размер спрайта
+    ctx.globalAlpha = twinkle * (0.35 + 0.65 * worldState.node);
+    ctx.drawImage(p.sprite, p.x - s / 2, p.y - s / 2, s, s);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawNodes(){
+  if (worldState.node <= 0.01) return;
+  const cr = clusterR();
+  ctx.textAlign = 'center';
+  for (const n of nodes){
+    const pulse = REDUCED ? 1 : 1 + 0.07 * Math.sin(time * 1.3 + n.pulse);
+
+    // ореол (спрайт свечения цвета философа)
+    const gs = cr * 3.4 * pulse;
+    ctx.globalAlpha = 0.85 * worldState.node;
+    ctx.drawImage(sprites[n.id], n.px - gs / 2, n.py - gs / 2, gs, gs);
+
+    // ядро
+    ctx.globalAlpha = worldState.node;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(n.px, n.py, 3.2, 0, TAU); ctx.fill();
+
+    // тонкое кольцо
+    ctx.strokeStyle = hexToRgba(n.color, (n.hover ? 0.95 : 0.45) * worldState.node);
+    ctx.lineWidth = (n.hover ? 1.5 : 1) / cam.z;
+    ctx.beginPath(); ctx.arc(n.px, n.py, cr * 0.62, 0, TAU); ctx.stroke();
+
+    // подпись при наведении
+    const target = (n.hover && introActive && !entering && cam.z < 1.2) ? 1 : 0;
+    n.labelA = lerp(n.labelA, target, 0.12);
+    if (n.labelA > 0.02){
+      ctx.globalAlpha = n.labelA * worldState.node;
+      ctx.fillStyle = hexToRgba(n.color, 0.95);
+      ctx.font = '500 12px Inter, sans-serif';
+      try { ctx.letterSpacing = '3px'; } catch(e){}
+      ctx.fillText(n.name.toUpperCase(), n.px, n.py + cr * 0.62 + 24);
+      try { ctx.letterSpacing = '0px'; } catch(e){}
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* --- Главный цикл --- */
+const mouse = { x: -100, y: -100 };
+let last = performance.now();
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  time += dt * (REDUCED ? 0.25 : 1);                // reduced motion — всё медленнее
+  stepParticles();
+  // параллакс от мыши (мягкое следование)
+  if (FINE_POINTER && !REDUCED){
+    cam.px = lerp(cam.px, (mouse.x - W / 2) * 0.03, 0.04);
+    cam.py = lerp(cam.py, (mouse.y - H / 2) * 0.03, 0.04);
+  }
+  updateCursor();
+  draw();
+}
+
+// наведение на узлы (по координатам мыши)
+function nodeAt(x, y){
+  const r = clusterR() * 0.8 + 18;
+  for (const n of nodes){
+    if (Math.hypot(x - n.px, y - n.py) < r) return n;
+  }
+  return null;
+}
+window.addEventListener('mousemove', e => {
+  mouse.x = e.clientX; mouse.y = e.clientY;
+  if (!cursorShown){ cursorShown = true; document.documentElement.classList.add('cursor-on'); }
+  const hov = (introActive && !entering && cam.z < 1.05) ? nodeAt(e.clientX, e.clientY) : null;
+  if (hov !== hoverNode){
+    hoverNode = hov;
+    nodes.forEach(n => n.hover = (n === hov));
+    refreshRing();
+  }
+});
+canvas.addEventListener('click', e => {
+  if (!introActive || entering) return;
+  const n = nodeAt(e.clientX, e.clientY);
+  if (n) enterTo(n);                                // клик по узлу = влёт к нему
+});
+
+/* ------------------------------------------------------------
+   3. ПРЕЛОАДЕР
+   Прогресс «догоняет» 100% только после готовности шрифтов.
+   ------------------------------------------------------------ */
+const preEl      = document.getElementById('preloader');
+const preCounter = preEl.querySelector('.pre-counter');
+const preBar     = preEl.querySelector('.pre-line span');
+let fontsReady = false, preDone = false, prog = 0;
+if (document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => fontsReady = true);
+}
+window.addEventListener('load', () => fontsReady = true);
+setTimeout(() => fontsReady = true, 4000);          // страховка от медленной сети
+
+function tickPre(){
+  if (preDone) return;
+  const cap = fontsReady ? 100 : 86;
+  prog = Math.min(cap, prog + Math.max(0.4, (cap - prog) * 0.05));
+  preCounter.textContent = Math.floor(prog) + '%';
+  preBar.style.transform = `scaleX(${prog / 100})`;
+  if (prog >= 99.6){ finishPre(); return; }
+  requestAnimationFrame(tickPre);
+}
+function finishPre(){
+  preDone = true;
+  preCounter.textContent = '100%';
+  preBar.style.transform = 'scaleX(1)';
+  preEl.querySelector('.pre-node').style.animation = 'none'; // отдаём transform GSAP
+  const hide = () => {
+    preEl.classList.add('done');
+    setTimeout(() => { preEl.style.display = 'none'; }, 700);
+    startIntro();
+  };
+  if (HAS_GSAP && !REDUCED){
+    gsap.timeline()
+      .to(['.pre-counter', '.pre-line'], { opacity: 0, duration: 0.35 })
+      .to('.pre-node', { scale: 16, opacity: 0, duration: 0.7, ease: 'power2.in' }, '<');
+    setTimeout(hide, 550);
+  } else {
+    setTimeout(hide, 250);
+  }
+}
+
+/* ------------------------------------------------------------
+   4. ТИПОГРАФИКА
+   ------------------------------------------------------------ */
+// Заголовок: слова -> буквы; слово «алгоритмов» — единым градиентным блоком
+function buildTitle(){
+  const el = document.getElementById('title');
+  const frag = document.createElement('div');
+  frag.setAttribute('aria-hidden', 'true');
+  frag.innerHTML = TITLE.split(' ').map(w => {
+    if (w === 'алгоритмов') return `<span class="word accent ch">${w}</span>`;
+    return `<span class="word">${[...w].map(c => `<span class="ch">${c}</span>`).join('')}</span>`;
+  }).join(' ');
+  el.appendChild(frag);
+}
+
+// Печатная машинка для слогана
+function typeText(){
+  const el = document.getElementById('slogan-text');
+  if (REDUCED){ el.textContent = SLOGAN; return Promise.resolve(); }
+  document.body.classList.add('typing');
+  return new Promise(res => {
+    let i = 0;
+    (function tick(){
+      i++; el.textContent = SLOGAN.slice(0, i);
+      if (i < SLOGAN.length) setTimeout(tick, rand(24, 58));
+      else res();
+    })();
+  });
+}
+
+/* ------------------------------------------------------------
+   5. ЗВУК (Web Audio, генерируется на лету — без файлов)
+   Дрон-фон + мягкие бипы + «вжух» на переходе.
+   ------------------------------------------------------------ */
+const Sound = {
+  ctx: null, master: null, noiseBuf: null, muted: true,
+  ensure(){
+    if (this.ctx) return true;
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      this.ctx = new AC();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0;
+      this.master.connect(this.ctx.destination);
+      // фильтр + три расстроенных осциллятора = космический дрон
+      const filt = this.ctx.createBiquadFilter();
+      filt.type = 'lowpass'; filt.frequency.value = 240; filt.Q.value = 0.6;
+      filt.connect(this.master);
+      [[55, 'sine', 0.5], [55.6, 'sine', 0.5], [110.4, 'triangle', 0.12]].forEach(([f, t, v]) => {
+        const o = this.ctx.createOscillator(); o.type = t; o.frequency.value = f;
+        const g = this.ctx.createGain(); g.gain.value = v;
+        o.connect(g); g.connect(filt); o.start();
+      });
+      // медленный LFO дышит фильтром
+      const lfo = this.ctx.createOscillator(); lfo.frequency.value = 0.06;
+      const lg = this.ctx.createGain(); lg.gain.value = 110;
+      lfo.connect(lg); lg.connect(filt.frequency); lfo.start();
+      // тихий шумовой «воздух» (он же источник для whoosh)
+      const nb = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+      const d = nb.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      this.noiseBuf = nb;
+      const ns = this.ctx.createBufferSource(); ns.buffer = nb; ns.loop = true;
+      const nf = this.ctx.createBiquadFilter(); nf.type = 'bandpass';
+      nf.frequency.value = 420; nf.Q.value = 0.5;
+      const ng = this.ctx.createGain(); ng.gain.value = 0.015;
+      ns.connect(nf); nf.connect(ng); ng.connect(this.master); ns.start();
+      return true;
+    } catch(e){ return false; }
+  },
+  toggle(){
+    if (!this.ensure()) return this.muted;
+    if (this.ctx.resume) this.ctx.resume();
+    this.muted = !this.muted;
+    const t = this.ctx.currentTime;
+    this.master.gain.cancelScheduledValues(t);
+    this.master.gain.linearRampToValueAtTime(this.muted ? 0 : 0.055, t + 0.5);
+    const btn = document.getElementById('mute-btn');
+    btn.classList.toggle('unmuted', !this.muted);
+    btn.setAttribute('aria-pressed', String(!this.muted));
+    return this.muted;
+  },
+  blip(){                                  // тёплый короткий клик
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(540, t);
+    o.frequency.exponentialRampToValueAtTime(320, t + 0.16);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(t); o.stop(t + 0.25);
+  },
+  whoosh(){                                // шумовой подъём для zoom-перехода
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuf;
+    const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+    f.frequency.setValueAtTime(180, t);
+    f.frequency.exponentialRampToValueAtTime(2400, t + 1.5);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.28, t + 1.2);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.7);
+    src.connect(f); f.connect(g); g.connect(this.ctx.destination);
+    src.start(t); src.stop(t + 1.8);
+  }
+};
+document.getElementById('mute-btn').addEventListener('click', () => Sound.toggle());
+
+/* ------------------------------------------------------------
+   6. КАСТОМНЫЙ КУРСОР (только точные указатели)
+   ------------------------------------------------------------ */
+const dotEl  = document.getElementById('cursor-dot');
+const ringEl = document.getElementById('cursor-ring');
+let cursorShown = false, domHover = false;
+let ringX = -100, ringY = -100;
+
+function refreshRing(){
+  ringEl.classList.toggle('is-hover', domHover || !!hoverNode);
+}
+if (FINE_POINTER){
+  document.documentElement.classList.add('has-cursor');
+  document.addEventListener('mouseover', e => {
+    domHover = !!(e.target.closest && e.target.closest('[data-hover]'));
+    refreshRing();
+  });
+  window.addEventListener('mousedown', () => ringEl.classList.add('is-down'));
+  window.addEventListener('mouseup',   () => ringEl.classList.remove('is-down'));
+  document.addEventListener('mouseleave', () => document.documentElement.classList.remove('cursor-on'));
+  document.addEventListener('mouseenter', () => { if (cursorShown) document.documentElement.classList.add('cursor-on'); });
+}
+function updateCursor(){
+  if (!FINE_POINTER) return;
+  ringX = lerp(ringX, mouse.x, 0.18);
+  ringY = lerp(ringY, mouse.y, 0.18);
+  dotEl.style.transform  = `translate3d(${mouse.x}px,${mouse.y}px,0) translate(-50%,-50%)`;
+  ringEl.style.transform = `translate3d(${ringX}px,${ringY}px,0) translate(-50%,-50%)`;
+}
+
+/* ------------------------------------------------------------
+   7. GSAP-СЦЕНЫ
+   ------------------------------------------------------------ */
+const flash = document.getElementById('flash');
+
+// Интро: сборка частиц → узлы → надзаголовок → буквы → слоган → кнопка
+function startIntro(){
+  introActive = true;
+
+  // Статичный режим: reduced motion или GSAP не загрузился с CDN
+  if (REDUCED || !HAS_GSAP){
+    document.body.classList.add('reveal-static');
+    worldState.edge = 1; worldState.node = 1;
+    typeText().then(() => document.body.classList.add('reveal-static'));
+    return;
+  }
+
+  // 1) частицы слетаются в шесть узлов
+  gsap.to(particles.filter(p => p.node >= 0), {
+    assemble: 1, duration: 2.6, ease: 'power2.inOut',
+    stagger: { each: 0.005, from: 'random' }
+  });
+  // 2) связи и узлы проявляются
+  gsap.to(worldState, { edge: 1, node: 1, duration: 2.4, delay: 1.0, ease: 'power2.out' });
+
+  // 3) типографская сцена
+  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+  tl.to('.overtitle', { opacity: 1, duration: 1.0 }, 0.9)
+    .from('.overtitle .line', { scaleX: 0, duration: 1.1, ease: 'power2.inOut' }, 0.9)
+    .from('.ch', { y: 36, opacity: 0, filter: 'blur(10px)', duration: 0.9, stagger: 0.022 }, 1.15)
+    .add(() => {
+      typeText().then(() => {
+        gsap.to('#enter-btn', { opacity: 1, y: 0, duration: 1.0, ease: 'power3.out' });
+        gsap.to('#hint',      { opacity: 1, duration: 1.0, delay: 0.35 });
+      });
+    })
+    .to('#mute-btn', { opacity: 1, duration: 1.0 }, 0.9);
+}
+
+// Влёт в мир философа (узел или кнопка «Войти в карту»)
+function enterTo(node){
+  if (entering || !introActive) return;
+  entering = true;
+  hoverNode = null;
+  nodes.forEach(n => n.hover = false);
+  Sound.blip();
+
+  // вспышка окрашивается цветом философа
+  flash.style.background =
+    `radial-gradient(circle at 50% 50%, #ffffff 0%, ${node.color} 46%, ${hexToRgba(node.color, 0.92)} 100%)`;
+
+  if (HAS_GSAP && !REDUCED){
+    Sound.whoosh();
+    gsap.timeline()
+      .to(['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'], {
+        opacity: 0, y: -26, duration: 0.5, stagger: 0.05, ease: 'power2.in'
+      })
+      .add(() => {
+        // камера летит в узел
+        gsap.to(cam, { z: 15, x: node.px, y: node.py, duration: 1.6, ease: 'power3.in' });
+      })
+      .to(flash, { opacity: 1, duration: 0.5, ease: 'power2.in' }, '-=0.15')
+      .add(showNextPart);
+  } else {
+    // простой переход без анимаций
+    document.getElementById('intro').style.opacity = 0;
+    flash.style.transition = 'opacity .45s linear';
+    flash.style.opacity = 1;
+    setTimeout(showNextPart, 480);
+  }
+}
+
+// Плейсхолдер части 1 (появляется из вспышки)
+function showNextPart(){
+  introActive = false;
+  const np = document.getElementById('next-part');
+  np.hidden = false;
+  if (HAS_GSAP && !REDUCED){
+    gsap.fromTo(np, { opacity: 0 }, { opacity: 1, duration: 0.9, ease: 'power2.out' });
+    gsap.fromTo('#next-part .np-in',
+      { y: 26, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.9, stagger: 0.08, ease: 'power3.out', delay: 0.15 });
+    gsap.to(flash, { opacity: 0, duration: 1.2, delay: 0.35, ease: 'power2.out' });
+  } else {
+    np.style.opacity = 1;
+    flash.style.opacity = 0;
+  }
+}
+
+// Назад к интро (кнопка или Escape)
+function backToIntro(){
+  const np = document.getElementById('next-part');
+  Sound.blip();
+  entering = false;
+  if (HAS_GSAP && !REDUCED){
+    gsap.to(np, { opacity: 0, duration: 0.5, onComplete: () => { np.hidden = true; } });
+    gsap.to(cam, { z: 1, x: W / 2, y: H / 2, duration: 1.4, ease: 'power3.inOut' });
+    gsap.to(['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'],
+      { opacity: 1, y: 0, duration: 0.8, stagger: 0.05, delay: 0.4, ease: 'power2.out' });
+  } else {
+    np.style.opacity = 0; np.hidden = true;
+    document.getElementById('intro').style.opacity = 1;
+    flash.style.opacity = 0;
+  }
+  introActive = true;
+}
+document.getElementById('back-btn').addEventListener('click', backToIntro);
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('next-part').hidden) backToIntro();
+});
+document.getElementById('enter-btn').addEventListener('click', () => {
+  // кнопка ведёт к случайному узлу — каждый вход чуть иной
+  enterTo(nodes[Math.floor(Math.random() * nodes.length)]);
+});
+
+/* ------------------------------------------------------------
+   ИНИЦИАЛИЗАЦИЯ
+   ------------------------------------------------------------ */
+buildTitle();
+resize();
+initStars();
+initParticles();
+window.addEventListener('resize', () => { resize(); initStars(); });
+requestAnimationFrame(loop);
+requestAnimationFrame(tickPre);
+
+/* ------------------------------------------------------------
+   ТОЧКИ РАСШИРЕНИЯ · ЧАСТИ 1–4
+   Часть 1 (карта): секция #next-part заменяется SVG-графом;
+     узлы = те же PHILOSOPHERS, клик -> enterTo(node) уже готов.
+   Часть 2 (миры): шаблон мира философа — отдельные <section>,
+     переход из enterTo() ведёт не в плейсхолдер, а в мир.
+   Часть 3 (тест): 8 вопросов, прогресс-бар, результат.
+   Часть 4 (финал): «Алгоритм предлагает. Выбираешь — ты».
+   Скролл-анимации: ScrollTrigger уже зарегистрирован;
+     Lenis подключается строкой в <head> (см. комментарий там).
+   ------------------------------------------------------------ */
+</script>
+</body>
+</html>
