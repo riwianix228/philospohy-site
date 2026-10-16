@@ -226,48 +226,82 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 #mute-btn.unmuted .off{ display:none }
 
 /* ==========================================================
-   6. ПЛЕЙСХОЛДЕР ЧАСТИ 1 (после zoom-перехода)
+   6. ЭКРАН 1 · КАРТА ВЕЛИКИХ ИДЕЙ (SVG-граф) — ЧАСТЬ 1
    ========================================================== */
-#next-part{
-  position:absolute; inset:0; z-index:20;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  text-align:center; padding:24px;
-  background:rgba(10,10,15,.68); backdrop-filter:blur(3px);
-}
-#next-part[hidden]{ display:none }
-.np-kicker{
+#map-screen{ position:absolute; inset:0; z-index:20; display:flex; flex-direction:column }
+#map-screen[hidden]{ display:none }
+.map-head{ text-align:center; padding:clamp(44px, 7vh, 76px) 24px 0 }
+.kicker{
   font:500 11px/1 var(--sans); letter-spacing:.4em; text-indent:.4em;
   text-transform:uppercase; color:var(--gold);
 }
-.np-title{
-  font:500 clamp(34px, 4.6vw, 64px)/1.12 var(--serif);
-  color:var(--ink); margin:16px 0 34px;
+.map-title{
+  font:500 clamp(28px, 3.6vw, 52px)/1.15 var(--serif);
+  color:var(--ink); margin:14px 0 10px;
 }
-.np-chips{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; max-width:660px; margin-bottom:30px }
-.np-chip{
-  display:flex; align-items:center; gap:9px;
-  padding:10px 17px; border:1px solid rgba(237,237,242,.12); border-radius:999px;
-  font:400 12px/1 var(--sans); letter-spacing:.08em; color:var(--dim);
-  transition:border-color .3s, color .3s, box-shadow .3s;
+.map-sub{ font:300 clamp(12.5px, 1.4vw, 15px)/1.6 var(--sans); color:var(--dim); letter-spacing:.04em }
+#map-wrap{ position:relative; flex:1; min-height:0; width:min(1200px, 100%); margin:0 auto }
+#map-svg{ position:absolute; inset:0; width:100%; height:100% }
+/* узел графа */
+.map-node{ cursor:pointer; outline:none }
+.map-node .node-glow{ opacity:.72 }
+.map-node.hot .node-glow{ opacity:1 }
+.node-label{
+  fill:rgba(237,237,242,.62); font:500 13px var(--sans);
+  letter-spacing:.16em; text-anchor:middle;
+  transition:fill .3s;
 }
-.np-chip i{
-  width:7px; height:7px; border-radius:50%;
-  background:var(--c); box-shadow:0 0 10px var(--c);
+.map-node.hot .node-label, .map-node:focus-visible .node-label{ fill:var(--c) }
+.node-ring{ transition:stroke-width .3s }
+.map-node.hot .node-ring, .map-node:focus-visible .node-ring{ stroke-width:2.2 }
+@keyframes glowPulse{ 0%,100%{opacity:.55} 50%{opacity:1} }
+/* мини-карточка узла (наполняется и позиционируется в JS) */
+#map-card{
+  position:absolute; z-index:5; width:min(254px, 74vw); opacity:0; pointer-events:none;
+  padding:16px 18px 14px; border-radius:14px;
+  background:rgba(12,12,20,.86); border:1px solid var(--cc, rgba(237,237,242,.35));
+  backdrop-filter:blur(10px); box-shadow:0 14px 40px rgba(0,0,0,.5);
 }
-.np-chip:hover{ border-color:var(--c); color:var(--ink); box-shadow:0 0 18px rgba(237,237,242,.08) }
-.np-note{
-  font:300 12.5px/1.9 var(--sans); color:rgba(237,237,242,.42);
-  max-width:480px; margin-bottom:40px;
+.mc-name{ font:500 24px/1.1 var(--serif); color:var(--ink) }
+.mc-years{ font:400 10.5px/1 var(--sans); letter-spacing:.14em; color:var(--dim); margin:7px 0 10px }
+.mc-idea{ font:300 12.5px/1.65 var(--sans); color:rgba(237,237,242,.72) }
+.mc-go{ font:500 9.5px/1 var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--cc); margin-top:12px }
+#map-hint{
+  text-align:center; padding:0 24px calc(18px + var(--safe-b));
+  font:300 11px/1.6 var(--sans); letter-spacing:.22em; text-indent:.22em;
+  text-transform:uppercase; color:rgba(237,237,242,.35);
 }
-.np-note em{ color:rgba(237,237,242,.7); font-style:italic }
-#back-btn{
-  appearance:none; background:transparent; border:1px solid rgba(237,237,242,.25);
-  border-radius:999px; color:var(--dim);
-  font:500 11px/1 var(--sans); letter-spacing:.28em; text-indent:.28em; text-transform:uppercase;
-  padding:16px 32px;
+.ghost-btn{
+  appearance:none; background:transparent; border:1px solid rgba(237,237,242,.22);
+  border-radius:999px; color:var(--dim); padding:13px 22px;
+  font:500 10.5px/1 var(--sans); letter-spacing:.24em; text-indent:.24em; text-transform:uppercase;
   transition:color .3s, border-color .3s, background .3s;
 }
-#back-btn:hover{ color:var(--ink); border-color:rgba(237,237,242,.6); background:rgba(237,237,242,.05) }
+.ghost-btn:hover{ color:var(--ink); border-color:rgba(237,237,242,.55); background:rgba(237,237,242,.05) }
+#map-back{ position:absolute; top:calc(18px + var(--safe-t)); left:20px }
+
+/* ==========================================================
+   7. ЭКРАН 2 · ПРЕВЬЮ МИРА ФИЛОСОФА (часть 2 заменит его полным миром)
+   ========================================================== */
+#world-screen{
+  position:absolute; inset:0; z-index:22;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:24px;
+}
+#world-screen[hidden]{ display:none }
+.w-kicker{ color:var(--wc, var(--gold)) }
+.w-name{
+  font:500 clamp(44px, 6vw, 84px)/1.05 var(--serif); color:var(--ink);
+  margin:18px 0 10px; text-shadow:0 0 60px var(--wc, transparent);
+}
+.w-years{ font:400 12px/1 var(--sans); letter-spacing:.3em; text-indent:.3em; color:var(--dim); margin-bottom:26px }
+.w-idea{ font:300 clamp(14px, 1.6vw, 16.5px)/1.8 var(--sans); color:rgba(237,237,242,.78); max-width:560px; margin-bottom:26px }
+.w-quote{
+  font:italic 500 clamp(20px, 2.4vw, 30px)/1.4 var(--serif);
+  color:var(--wc, #fff); text-shadow:0 0 34px var(--wc, transparent);
+  max-width:640px; margin-bottom:30px;
+}
+.w-note{ font:300 12.5px/1.9 var(--sans); color:rgba(237,237,242,.42); max-width:480px; margin-bottom:38px }
 
 /* Статичное раскрытие контента (reduced motion или нет GSAP) */
 .reveal-static .overtitle,
@@ -277,7 +311,7 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 .reveal-static #enter-btn{ transform:none }
 
 /* ==========================================================
-   7. АДАПТИВ: 1440 / 1024 / 768 / 480
+   8. АДАПТИВ: 1440 / 1024 / 768 / 640 / 480
    ========================================================== */
 @media (max-width:1024px){
   #title{ margin-bottom:26px }
@@ -286,7 +320,15 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   .overtitle{ letter-spacing:.3em; text-indent:.3em; gap:12px }
   .overtitle .line{ width:34px }
   #enter-btn{ padding:19px 32px }
-  .np-note{ margin-bottom:32px }
+  #map-back{ top:calc(14px + var(--safe-t)); left:14px }
+}
+@media (max-width:640px){
+  /* узлы и подписи крупнее в «сжатом» viewBox карты */
+  #map-svg .node-label{ font-size:26px; letter-spacing:.12em }
+  #map-svg .node-ring{ r:32 }
+  #map-svg .node-core{ r:7 }
+  #map-card{ width:212px }
+  .w-name{ font-size:clamp(38px, 11vw, 52px) }
 }
 @media (max-width:480px){
   .overtitle{ margin-bottom:26px }
@@ -295,11 +337,11 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   #enter-btn{ padding:17px 26px; font-size:11px }
   #mute-btn{ width:42px; height:42px; top:calc(14px + var(--safe-t)); right:14px }
   #hint{ letter-spacing:.14em }
-  .np-chip{ padding:9px 14px; font-size:11px }
+  .map-head{ padding-top:56px }
 }
 
 /* ==========================================================
-   8. ДОСТУПНОСТЬ: prefers-reduced-motion
+   9. ДОСТУПНОСТЬ: prefers-reduced-motion
    ========================================================== */
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{
@@ -352,29 +394,43 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
       <span id="slogan-text" aria-hidden="true"></span><span class="caret" aria-hidden="true"></span>
     </p>
     <button id="enter-btn" data-hover>Войти в карту<span class="arr" aria-hidden="true">&nbsp;→</span><span class="glow" aria-hidden="true"></span></button>
-    <p id="hint">Кликните по узлу — каждый ведёт в свой мир</p>
+    <p id="hint">Войдите в карту — или кликните по узлу</p>
+  </section>
+
+  <!-- ЭКРАН 1 · КАРТА ВЕЛИКИХ ИДЕЙ (SVG-граф строится в JS из PHILOSOPHERS + EDGES) -->
+  <section id="map-screen" hidden aria-label="Карта великих идей">
+    <header class="map-head">
+      <div class="kicker">Часть 1 · Карта великих идей</div>
+      <h2 class="map-title">Шесть голосов — один вопрос</h2>
+      <p class="map-sub">Кто принимает твои решения — ты или алгоритм?</p>
+    </header>
+    <div id="map-wrap">
+      <svg id="map-svg" preserveAspectRatio="xMidYMid meet" role="group" aria-label="Граф связей шести философов"></svg>
+      <!-- мини-карточка узла: наполняется и позиционируется в JS -->
+      <div id="map-card" aria-hidden="true">
+        <div class="mc-name"></div>
+        <div class="mc-years"></div>
+        <div class="mc-idea"></div>
+        <div class="mc-go">клик — войти в мир →</div>
+      </div>
+    </div>
+    <p id="map-hint">Наведите на узел — клик откроет мир</p>
+    <button id="map-back" class="ghost-btn" data-hover>← Интро</button>
   </section>
 
   <!--
-    ТОЧКА РАСШИРЕНИЯ · ЧАСТЬ 1
-    Здесь вместо плейсхолдера появится SVG-карта из 6 миров.
+    ТОЧКА РАСШИРЕНИЯ · ЧАСТЬ 2
+    Вместо превью (#world-screen) появится полный мир философа:
+    портрет (SVG/CSS), идеи, цитаты, блок «А что бы он сказал про алгоритмы?».
   -->
-  <section id="next-part" hidden>
-    <div class="np-kicker np-in">Часть 1 · Следующий экран</div>
-    <h2 class="np-title np-in">Карта великих идей</h2>
-    <div class="np-chips np-in">
-      <span class="np-chip" style="--c:#E8B84B"><i aria-hidden="true"></i>Сократ</span>
-      <span class="np-chip" style="--c:#6FA8DC"><i aria-hidden="true"></i>Декарт</span>
-      <span class="np-chip" style="--c:#9B7EDE"><i aria-hidden="true"></i>Кант</span>
-      <span class="np-chip" style="--c:#E5484D"><i aria-hidden="true"></i>Ницше</span>
-      <span class="np-chip" style="--c:#7FB88A"><i aria-hidden="true"></i>Марк Аврелий</span>
-      <span class="np-chip" style="--c:#D9885F"><i aria-hidden="true"></i>Сартр</span>
-    </div>
-    <p class="np-note np-in">
-      Здесь появится интерактивный граф из шести миров философов.
-      Сквозной вопрос путешествия: <em>«Кто принимает твои решения — ты или алгоритм?»</em>
-    </p>
-    <button id="back-btn" class="np-in" data-hover>← Вернуться к интро</button>
+  <section id="world-screen" hidden aria-label="Мир философа — превью">
+    <div class="kicker w-kicker w-in">Часть 2 · Мир философа</div>
+    <h2 class="w-name w-in" id="w-name"></h2>
+    <div class="w-years w-in" id="w-years"></div>
+    <p class="w-idea w-in" id="w-idea"></p>
+    <blockquote class="w-quote w-in" id="w-quote"></blockquote>
+    <p class="w-note w-in">Здесь появится его мир: портрет, идеи и ответ на вопрос —<br>что бы он сказал про алгоритмы?</p>
+    <button id="world-back" class="ghost-btn w-in" data-hover>← К карте</button>
   </section>
 </main>
 
@@ -405,14 +461,35 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 const TITLE  = 'Философия в эпоху алгоритмов';
 const SLOGAN = 'Алгоритм уже знает, что ты выберешь. А ты?';
 
-// Шесть философов — координаты узлов в долях экрана (0..1)
+// Шесть философов:
+//   x, y   — узлы на canvas-интро (доли экрана 0..1)
+//   mx, my — узлы на SVG-карте (viewBox 1200×700)
+//   years / idea / quote — данные мини-карточки и превью мира
 const PHILOSOPHERS = [
-  { id:'socrates',  name:'Сократ',       color:'#E8B84B', x:0.16, y:0.32 },
-  { id:'descartes', name:'Декарт',       color:'#6FA8DC', x:0.50, y:0.14 },
-  { id:'kant',      name:'Кант',         color:'#9B7EDE', x:0.85, y:0.38 },
-  { id:'nietzsche', name:'Ницше',        color:'#E5484D', x:0.72, y:0.82 },
-  { id:'marcus',    name:'Марк Аврелий', color:'#7FB88A', x:0.14, y:0.78 },
-  { id:'sartre',    name:'Сартр',        color:'#D9885F', x:0.42, y:0.62 },
+  { id:'socrates',  name:'Сократ',       color:'#E8B84B', x:0.16, y:0.32, mx:300, my:250,
+    years:'ок. 470 — 399 до н. э.',
+    idea:'Истина рождается из вопроса. Сомневайся — и думай сам.',
+    quote:'Я знаю, что ничего не знаю' },
+  { id:'descartes', name:'Декарт',       color:'#6FA8DC', x:0.50, y:0.14, mx:620, my:150,
+    years:'1596 — 1650',
+    idea:'Сомнение — метод: отбрось всё, кроме очевидного.',
+    quote:'Мыслю — следовательно, существую' },
+  { id:'kant',      name:'Кант',         color:'#9B7EDE', x:0.85, y:0.38, mx:950, my:300,
+    years:'1724 — 1804',
+    idea:'Поступай так, чтобы твоё правило могло стать всеобщим законом.',
+    quote:'Имей мужество пользоваться собственным умом' },
+  { id:'nietzsche', name:'Ницше',        color:'#E5484D', x:0.72, y:0.82, mx:830, my:590,
+    years:'1844 — 1900',
+    idea:'Создай свои ценности — вместо того, чтобы носить чужие.',
+    quote:'Стань тем, кто ты есть' },
+  { id:'marcus',    name:'Марк Аврелий', color:'#7FB88A', x:0.14, y:0.78, mx:430, my:620,
+    years:'121 — 180',
+    idea:'Властвуй над тем, что в твоей власти: над своими суждениями.',
+    quote:'Счастье твоей жизни зависит от качества твоих мыслей' },
+  { id:'sartre',    name:'Сартр',        color:'#D9885F', x:0.42, y:0.62, mx:640, my:380,
+    years:'1905 — 1980',
+    idea:'Ты — сумма твоих выборов. Отменить ответственность нельзя.',
+    quote:'Человек осуждён быть свободным' },
 ];
 // Линии-связи между узлами (индексы PHILOSOPHERS) — «созвездие»
 const EDGES = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[1,5],[2,5],[0,4]];
@@ -676,7 +753,7 @@ function nodeAt(x, y){
 window.addEventListener('mousemove', e => {
   mouse.x = e.clientX; mouse.y = e.clientY;
   if (!cursorShown){ cursorShown = true; document.documentElement.classList.add('cursor-on'); }
-  const hov = (introActive && !entering && cam.z < 1.05) ? nodeAt(e.clientX, e.clientY) : null;
+  const hov = (introActive && mapScreen.hidden && worldScreen.hidden && !entering && cam.z < 1.05) ? nodeAt(e.clientX, e.clientY) : null;
   if (hov !== hoverNode){
     hoverNode = hov;
     nodes.forEach(n => n.hover = (n === hov));
@@ -914,7 +991,7 @@ function startIntro(){
     .to('#mute-btn', { opacity: 1, duration: 1.0 }, 0.9);
 }
 
-// Влёт в мир философа (узел или кнопка «Войти в карту»)
+// Вход с интро: zoom-влёт сквозь узел → появление карты (экран 1)
 function enterTo(node){
   if (entering || !introActive) return;
   entering = true;
@@ -937,54 +1014,319 @@ function enterTo(node){
         gsap.to(cam, { z: 15, x: node.px, y: node.py, duration: 1.6, ease: 'power3.in' });
       })
       .to(flash, { opacity: 1, duration: 0.5, ease: 'power2.in' }, '-=0.15')
-      .add(showNextPart);
+      .add(() => showMap(true));
   } else {
     // простой переход без анимаций
     document.getElementById('intro').style.opacity = 0;
     flash.style.transition = 'opacity .45s linear';
     flash.style.opacity = 1;
-    setTimeout(showNextPart, 480);
+    setTimeout(() => showMap(true), 480);
   }
 }
 
-// Плейсхолдер части 1 (появляется из вспышки)
-function showNextPart(){
-  introActive = false;
-  const np = document.getElementById('next-part');
-  np.hidden = false;
+/* ------------------------------------------------------------
+   8. ЭКРАН 1 · КАРТА (SVG-ГРАФ) И НАВИГАЦИЯ
+   Маршрут: интро → карта → мир;  назад: мир → карта → интро
+   ------------------------------------------------------------ */
+const MAP_W = 1200, MAP_H = 700;
+const mapScreen   = document.getElementById('map-screen');
+const worldScreen = document.getElementById('world-screen');
+const mapSvg      = document.getElementById('map-svg');
+const mapCard     = document.getElementById('map-card');
+const NSVG = 'http://www.w3.org/2000/svg';
+
+function svgEl(tag, attrs = {}){
+  const el = document.createElementNS(NSVG, tag);
+  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  return el;
+}
+
+/* На узких экранах «приближаем» viewBox к созвездию,
+   чтобы узлы и подписи остались читабельными */
+function updateMapViewBox(){
+  mapSvg.setAttribute('viewBox', W < 640 ? '160 40 900 680' : `0 0 ${MAP_W} ${MAP_H}`);
+}
+
+/* --- Построение графа: градиенты → рёбра → импульсы → узлы --- */
+function buildMap(){
+  mapSvg.innerHTML = '';
+  const defs = svgEl('defs');
+
+  // свечение каждого узла в цвет философа
+  PHILOSOPHERS.forEach(p => {
+    const g = svgEl('radialGradient', { id: 'ng-' + p.id });
+    [[0, .85], [.4, .25], [1, 0]].forEach(([o, a]) => {
+      g.appendChild(svgEl('stop', { offset: o, 'stop-color': p.color, 'stop-opacity': a }));
+    });
+    defs.appendChild(g);
+  });
+  // градиент каждого ребра — от цвета узла к цвету узла
+  EDGES.forEach(([a, b], i) => {
+    const A = PHILOSOPHERS[a], B = PHILOSOPHERS[b];
+    const g = svgEl('linearGradient', {
+      id: 'eg-' + i, gradientUnits: 'userSpaceOnUse',
+      x1: A.mx, y1: A.my, x2: B.mx, y2: B.my
+    });
+    g.appendChild(svgEl('stop', { offset: 0, 'stop-color': A.color, 'stop-opacity': .55 }));
+    g.appendChild(svgEl('stop', { offset: 1, 'stop-color': B.color, 'stop-opacity': .55 }));
+    defs.appendChild(g);
+  });
+  mapSvg.appendChild(defs);
+
+  // рёбра
+  EDGES.forEach(([a, b], i) => {
+    const A = PHILOSOPHERS[a], B = PHILOSOPHERS[b];
+    const line = svgEl('line', {
+      class: 'map-edge', x1: A.mx, y1: A.my, x2: B.mx, y2: B.my,
+      stroke: `url(#eg-${i})`, 'stroke-width': 1
+    });
+    mapSvg.appendChild(line);
+    if (HAS_GSAP && !REDUCED){
+      // рисование линии при входе на карту
+      const L = Math.hypot(B.mx - A.mx, B.my - A.my);
+      line.style.strokeDasharray = L;
+      line.style.strokeDashoffset = L;
+      // бегущий импульс — «пакет данных» в нейросети идей
+      const dot = svgEl('circle', { class: 'map-pulse', r: 1.7, fill: '#cfd6ff', opacity: 0 });
+      mapSvg.appendChild(dot);
+      const o = { t: 0 };
+      gsap.to(o, {
+        t: 1, duration: rand(5, 9), delay: rand(1, 6),
+        repeat: -1, repeatDelay: rand(2, 6), ease: 'none',
+        onStart: () => gsap.set(dot, { opacity: .6 }),
+        onUpdate: () => {
+          dot.setAttribute('cx', lerp(A.mx, B.mx, o.t));
+          dot.setAttribute('cy', lerp(A.my, B.my, o.t));
+        }
+      });
+    }
+  });
+
+  // узлы
+  PHILOSOPHERS.forEach((p, i) => {
+    const g = svgEl('g', {
+      class: 'map-node', 'data-hover': '', 'data-i': i,
+      tabindex: 0, role: 'button', 'aria-label': `Мир философа: ${p.name}`
+    });
+    g.setAttribute('transform', `translate(${p.mx} ${p.my})`);
+    g.style.setProperty('--c', p.color);
+    const glow = svgEl('circle', { class: 'node-glow', r: 42, fill: `url(#ng-${p.id})` });
+    glow.style.animation = `glowPulse ${(3.2 + i * 0.35).toFixed(2)}s ease-in-out ${(i * 0.4).toFixed(2)}s infinite`;
+    const ring = svgEl('circle', { class: 'node-ring', r: 22, fill: 'rgba(10,10,15,.55)', stroke: p.color, 'stroke-width': 1.2 });
+    const core = svgEl('circle', { class: 'node-core', r: 4.5, fill: '#fff' });
+    const label = svgEl('text', { class: 'node-label', y: 48 });
+    label.textContent = p.name.toUpperCase();
+    g.append(glow, ring, core, label);
+    mapSvg.appendChild(g);
+    if (HAS_GSAP) gsap.set(g, { transformOrigin: 'center' });
+  });
+
+  updateMapViewBox();
+}
+
+/* --- Мини-карточка при наведении на узел --- */
+let cardShown = false;
+function showCard(g){
+  const p = PHILOSOPHERS[+g.dataset.i];
+  mapCard.style.setProperty('--cc', p.color);
+  mapCard.querySelector('.mc-name').textContent  = p.name;
+  mapCard.querySelector('.mc-years').textContent = p.years;
+  mapCard.querySelector('.mc-idea').textContent  = p.idea;
+  // позиция — по фактическому прямоугольнику узла на экране
+  const ringR = g.querySelector('.node-ring').getBoundingClientRect();
+  const wrap  = document.getElementById('map-wrap').getBoundingClientRect();
+  const cx = ringR.left + ringR.width / 2 - wrap.left;
+  const cy = ringR.top + ringR.height / 2 - wrap.top;
+  const cw = mapCard.offsetWidth, ch = mapCard.offsetHeight;
+  const x = Math.max(10, Math.min(wrap.width - cw - 10, cx - cw / 2));
+  const above = cy > wrap.height * 0.52;          // карточка снизу или сверху узла
+  const gap = ringR.height / 2 + 16;
+  let y = above ? cy - gap - ch : cy + gap;
+  y = Math.max(8, Math.min(wrap.height - ch - 8, y));
+  mapCard.style.left = x + 'px';
+  mapCard.style.top = y + 'px';
+  cardShown = true;
   if (HAS_GSAP && !REDUCED){
-    gsap.fromTo(np, { opacity: 0 }, { opacity: 1, duration: 0.9, ease: 'power2.out' });
-    gsap.fromTo('#next-part .np-in',
-      { y: 26, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.9, stagger: 0.08, ease: 'power3.out', delay: 0.15 });
-    gsap.to(flash, { opacity: 0, duration: 1.2, delay: 0.35, ease: 'power2.out' });
+    gsap.fromTo(mapCard, { opacity: 0, y: above ? 10 : -10, scale: .96 },
+      { opacity: 1, y: 0, scale: 1, duration: .32, ease: 'power2.out', overwrite: true });
   } else {
-    np.style.opacity = 1;
-    flash.style.opacity = 0;
+    mapCard.style.opacity = 1;
+  }
+}
+function hideCard(){
+  if (!cardShown) return;
+  cardShown = false;
+  if (HAS_GSAP && !REDUCED) gsap.to(mapCard, { opacity: 0, duration: .22, overwrite: true });
+  else mapCard.style.opacity = 0;
+}
+
+/* --- Атмосфера canvas-фона под каждый экран --- */
+function setAmbient(edge, node, z, dur){
+  if (HAS_GSAP && !REDUCED){
+    gsap.to(worldState, { edge, node, duration: dur, ease: 'power2.out', overwrite: 'auto' });
+    gsap.to(cam, { z, x: W / 2, y: H / 2, duration: dur, ease: 'power2.out', overwrite: 'auto' });
+  } else {
+    worldState.edge = edge; worldState.node = node;
+    cam.z = z; cam.x = W / 2; cam.y = H / 2;
   }
 }
 
-// Назад к интро (кнопка или Escape)
-function backToIntro(){
-  const np = document.getElementById('next-part');
+/* --- Показ карты (first = с отрисовкой рёбер) --- */
+function showMap(first){
+  worldScreen.hidden = true; worldScreen.style.opacity = '';
+  mapScreen.hidden = false;
+  introActive = false;
+  setAmbient(0.3, 0.35, 1.15, 2.4);
+  if (HAS_GSAP && !REDUCED){
+    if (first){
+      gsap.fromTo(mapScreen, { opacity: 0 }, { opacity: 1, duration: .7, ease: 'power2.out' });
+      gsap.to(flash, { opacity: 0, duration: 1.1, delay: .3, ease: 'power2.out' });
+      gsap.timeline({ onComplete: () => { entering = false; } })
+        .fromTo('.map-head > *', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: .8, stagger: .1, ease: 'power3.out' }, .15)
+        .to('.map-edge', { strokeDashoffset: 0, duration: 1.3, stagger: .1, ease: 'power2.inOut' }, .4)
+        .fromTo('.map-node', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: .8, stagger: .09, ease: 'back.out(1.6)' }, .6)
+        .fromTo(['#map-hint', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .8 }, '-=0.3');
+    } else {
+      gsap.fromTo(mapScreen, { opacity: 0 }, { opacity: 1, duration: .5, ease: 'power2.out' });
+      gsap.timeline({ onComplete: () => { entering = false; } })
+        .fromTo('.map-head > *', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .6, stagger: .07, ease: 'power2.out' }, .1)
+        .fromTo('.map-node', { scale: .55, opacity: 0 }, { scale: 1, opacity: 1, duration: .65, stagger: .05, ease: 'back.out(1.7)' }, .15)
+        .fromTo(['#map-hint', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .6 }, .5);
+    }
+  } else {
+    flash.style.opacity = 0;
+    entering = false;
+  }
+}
+
+/* --- Влёт в мир философа (клик по узлу карты) --- */
+function flyToWorld(p, g){
+  if (entering) return;
+  entering = true;
+  hideCard();
+  g.classList.remove('hot');
   Sound.blip();
+  flash.style.background =
+    `radial-gradient(circle at 50% 50%, #ffffff 0%, ${p.color} 46%, ${hexToRgba(p.color, .92)} 100%)`;
+  if (HAS_GSAP && !REDUCED){
+    Sound.whoosh();
+    // зумим сам SVG в точку узла (origin — экранный центр кольца)
+    const ringR = g.querySelector('.node-ring').getBoundingClientRect();
+    const svgR  = mapSvg.getBoundingClientRect();
+    const ox = ringR.left + ringR.width / 2 - svgR.left;
+    const oy = ringR.top + ringR.height / 2 - svgR.top;
+    gsap.timeline()
+      .to(['.map-head > *', '#map-hint', '#map-back'],
+        { opacity: 0, y: -16, duration: .4, stagger: .04, ease: 'power2.in' })
+      .to(mapSvg, { scale: 9, transformOrigin: `${ox}px ${oy}px`, duration: 1.5, ease: 'power3.in' }, .1)
+      .to(flash, { opacity: 1, duration: .5, ease: 'power2.in' }, 1.15)
+      .add(() => showWorld(p));
+  } else {
+    flash.style.transition = 'opacity .45s linear';
+    flash.style.opacity = 1;
+    setTimeout(() => showWorld(p), 480);
+  }
+}
+
+/* --- Превью мира философа (часть 2 заменит полным экраном) --- */
+function showWorld(p){
+  worldScreen.style.setProperty('--wc', p.color);
+  worldScreen.style.background =
+    `radial-gradient(1000px 640px at 50% 40%, ${hexToRgba(p.color, .16)}, transparent 70%), #0a0a0f`;
+  document.getElementById('w-name').textContent  = p.name;
+  document.getElementById('w-years').textContent = p.years;
+  document.getElementById('w-idea').textContent  = p.idea;
+  document.getElementById('w-quote').textContent = '«' + p.quote + '»';
+  mapScreen.hidden = true;
+  if (HAS_GSAP) gsap.set(mapSvg, { clearProps: 'transform' });   // сброс влёта под покровом вспышки
+  worldScreen.hidden = false;
+  setAmbient(0.12, 0.16, 1.05, 1.6);
   entering = false;
   if (HAS_GSAP && !REDUCED){
-    gsap.to(np, { opacity: 0, duration: 0.5, onComplete: () => { np.hidden = true; } });
-    gsap.to(cam, { z: 1, x: W / 2, y: H / 2, duration: 1.4, ease: 'power3.inOut' });
-    gsap.to(['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'],
-      { opacity: 1, y: 0, duration: 0.8, stagger: 0.05, delay: 0.4, ease: 'power2.out' });
+    gsap.fromTo(worldScreen, { opacity: 0 }, { opacity: 1, duration: .6, ease: 'power2.out' });
+    gsap.fromTo('#world-screen .w-in',
+      { y: 26, opacity: 0 },
+      { y: 0, opacity: 1, duration: .9, stagger: .09, ease: 'power3.out', delay: .1 });
+    gsap.to(flash, { opacity: 0, duration: 1.1, delay: .25, ease: 'power2.out' });
   } else {
-    np.style.opacity = 0; np.hidden = true;
-    document.getElementById('intro').style.opacity = 1;
     flash.style.opacity = 0;
   }
-  introActive = true;
 }
-document.getElementById('back-btn').addEventListener('click', backToIntro);
-window.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && !document.getElementById('next-part').hidden) backToIntro();
+
+/* --- Назад: мир → карта --- */
+function backToMap(){
+  if (entering || worldScreen.hidden) return;
+  entering = true;
+  Sound.blip();
+  setAmbient(0.3, 0.35, 1.15, 1.6);
+  if (HAS_GSAP && !REDUCED){
+    gsap.to(worldScreen, {
+      opacity: 0, duration: .45, ease: 'power2.in',
+      onComplete: () => { worldScreen.hidden = true; worldScreen.style.opacity = ''; showMap(false); }
+    });
+  } else {
+    worldScreen.hidden = true;
+    showMap(false);
+  }
+}
+
+/* --- Назад: карта → интро --- */
+function mapToIntro(){
+  if (entering || mapScreen.hidden) return;
+  entering = true;
+  Sound.blip();
+  hideCard();
+  setAmbient(1, 1, 1, 1.8);
+  if (HAS_GSAP && !REDUCED){
+    gsap.to(mapScreen, {
+      opacity: 0, duration: .55, ease: 'power2.in',
+      onComplete: () => { mapScreen.hidden = true; mapScreen.style.opacity = ''; }
+    });
+    gsap.to(['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'],
+      { opacity: 1, y: 0, duration: .8, stagger: .06, delay: .5, ease: 'power2.out' });
+  } else {
+    mapScreen.hidden = true;
+    document.getElementById('intro').style.opacity = 1;
+  }
+  introActive = true;
+  entering = false;
+}
+
+/* --- События карты: ховер, клик, клавиатура --- */
+mapSvg.addEventListener('mouseover', e => {
+  const g = e.target.closest('.map-node');
+  if (!g || entering) return;
+  g.classList.add('hot');
+  if (HAS_GSAP && !REDUCED) gsap.to(g, { scale: 1.22, duration: .35, ease: 'power2.out', overwrite: 'auto' });
+  showCard(g);
 });
+mapSvg.addEventListener('mouseout', e => {
+  const g = e.target.closest('.map-node');
+  if (!g || (e.relatedTarget && g.contains(e.relatedTarget))) return;
+  g.classList.remove('hot');
+  if (HAS_GSAP && !REDUCED) gsap.to(g, { scale: 1, duration: .4, ease: 'power2.out', overwrite: 'auto' });
+  hideCard();
+});
+mapSvg.addEventListener('click', e => {
+  const g = e.target.closest('.map-node');
+  if (!g) return;
+  flyToWorld(PHILOSOPHERS[+g.dataset.i], g);
+});
+mapSvg.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const g = e.target.closest('.map-node');
+  if (!g) return;
+  e.preventDefault();
+  flyToWorld(PHILOSOPHERS[+g.dataset.i], g);
+});
+document.getElementById('world-back').addEventListener('click', backToMap);
+document.getElementById('map-back').addEventListener('click', mapToIntro);
+window.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!worldScreen.hidden) backToMap();
+  else if (!mapScreen.hidden) mapToIntro();
+});
+
 document.getElementById('enter-btn').addEventListener('click', () => {
   // кнопка ведёт к случайному узлу — каждый вход чуть иной
   enterTo(nodes[Math.floor(Math.random() * nodes.length)]);
@@ -997,17 +1339,17 @@ buildTitle();
 resize();
 initStars();
 initParticles();
-window.addEventListener('resize', () => { resize(); initStars(); });
+buildMap();
+window.addEventListener('resize', () => { resize(); initStars(); updateMapViewBox(); });
 requestAnimationFrame(loop);
 requestAnimationFrame(tickPre);
 
 /* ------------------------------------------------------------
-   ТОЧКИ РАСШИРЕНИЯ · ЧАСТИ 1–4
-   Часть 1 (карта): секция #next-part заменяется SVG-графом;
-     узлы = те же PHILOSOPHERS, клик -> enterTo(node) уже готов.
-   Часть 2 (миры): шаблон мира философа — отдельные <section>,
-     переход из enterTo() ведёт не в плейсхолдер, а в мир.
-   Часть 3 (тест): 8 вопросов, прогресс-бар, результат.
+   ТОЧКИ РАСШИРЕНИЯ · ЧАСТИ 2–4
+   Часть 2 (миры): #world-screen заменяется полным миром философа
+     (портрет SVG/CSS, идеи, цитаты, блок «А что бы он сказал
+     про алгоритмы?»); точка входа — showWorld(p)/flyToWorld(p, g).
+   Часть 3 (тест): 8 вопросов, прогресс-бар, «анализ», результат.
    Часть 4 (финал): «Алгоритм предлагает. Выбираешь — ты».
    Скролл-анимации: ScrollTrigger уже зарегистрирован;
      Lenis подключается строкой в <head> (см. комментарий там).
