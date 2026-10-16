@@ -1,0 +1,640 @@
+   721→      ctx.fillText(n.name.toUpperCase(), n.px, n.py + cr * 0.62 + 24);
+   722→      try { ctx.letterSpacing = '0px'; } catch(e){}
+   723→    }
+   724→  }
+   725→  ctx.globalAlpha = 1;
+   726→}
+   727→
+   728→/* --- Главный цикл --- */
+   729→const mouse = { x: -100, y: -100 };
+   730→let last = performance.now();
+   731→function loop(now){
+   732→  requestAnimationFrame(loop);
+   733→  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+   734→  time += dt * (REDUCED ? 0.25 : 1);                // reduced motion — всё медленнее
+   735→  stepParticles();
+   736→  // параллакс от мыши (мягкое следование)
+   737→  if (FINE_POINTER && !REDUCED){
+   738→    cam.px = lerp(cam.px, (mouse.x - W / 2) * 0.03, 0.04);
+   739→    cam.py = lerp(cam.py, (mouse.y - H / 2) * 0.03, 0.04);
+   740→  }
+   741→  updateCursor();
+   742→  draw();
+   743→}
+   744→
+   745→// наведение на узлы (по координатам мыши)
+   746→function nodeAt(x, y){
+   747→  const r = clusterR() * 0.8 + 18;
+   748→  for (const n of nodes){
+   749→    if (Math.hypot(x - n.px, y - n.py) < r) return n;
+   750→  }
+   751→  return null;
+   752→}
+   753→window.addEventListener('mousemove', e => {
+   754→  mouse.x = e.clientX; mouse.y = e.clientY;
+   755→  if (!cursorShown){ cursorShown = true; document.documentElement.classList.add('cursor-on'); }
+   756→  const hov = (introActive && mapScreen.hidden && worldScreen.hidden && !entering && cam.z < 1.05) ? nodeAt(e.clientX, e.clientY) : null;
+   757→  if (hov !== hoverNode){
+   758→    hoverNode = hov;
+   759→    nodes.forEach(n => n.hover = (n === hov));
+   760→    refreshRing();
+   761→  }
+   762→});
+   763→canvas.addEventListener('click', e => {
+   764→  if (!introActive || entering) return;
+   765→  const n = nodeAt(e.clientX, e.clientY);
+   766→  if (n) enterTo(n);                                // клик по узлу = влёт к нему
+   767→});
+   768→
+   769→/* ------------------------------------------------------------
+   770→   3. ПРЕЛОАДЕР
+   771→   Прогресс «догоняет» 100% только после готовности шрифтов.
+   772→   ------------------------------------------------------------ */
+   773→const preEl      = document.getElementById('preloader');
+   774→const preCounter = preEl.querySelector('.pre-counter');
+   775→const preBar     = preEl.querySelector('.pre-line span');
+   776→let fontsReady = false, preDone = false, prog = 0;
+   777→if (document.fonts && document.fonts.ready){
+   778→  document.fonts.ready.then(() => fontsReady = true);
+   779→}
+   780→window.addEventListener('load', () => fontsReady = true);
+   781→setTimeout(() => fontsReady = true, 4000);          // страховка от медленной сети
+   782→
+   783→function tickPre(){
+   784→  if (preDone) return;
+   785→  const cap = fontsReady ? 100 : 86;
+   786→  prog = Math.min(cap, prog + Math.max(0.4, (cap - prog) * 0.05));
+   787→  preCounter.textContent = Math.floor(prog) + '%';
+   788→  preBar.style.transform = `scaleX(${prog / 100})`;
+   789→  if (prog >= 99.6){ finishPre(); return; }
+   790→  requestAnimationFrame(tickPre);
+   791→}
+   792→function finishPre(){
+   793→  preDone = true;
+   794→  preCounter.textContent = '100%';
+   795→  preBar.style.transform = 'scaleX(1)';
+   796→  preEl.querySelector('.pre-node').style.animation = 'none'; // отдаём transform GSAP
+   797→  const hide = () => {
+   798→    preEl.classList.add('done');
+   799→    setTimeout(() => { preEl.style.display = 'none'; }, 700);
+   800→    startIntro();
+   801→  };
+   802→  if (HAS_GSAP && !REDUCED){
+   803→    gsap.timeline()
+   804→      .to(['.pre-counter', '.pre-line'], { opacity: 0, duration: 0.35 })
+   805→      .to('.pre-node', { scale: 16, opacity: 0, duration: 0.7, ease: 'power2.in' }, '<');
+   806→    setTimeout(hide, 550);
+   807→  } else {
+   808→    setTimeout(hide, 250);
+   809→  }
+   810→}
+   811→
+   812→/* ------------------------------------------------------------
+   813→   4. ТИПОГРАФИКА
+   814→   ------------------------------------------------------------ */
+   815→// Заголовок: слова -> буквы; слово «алгоритмов» — единым градиентным блоком
+   816→function buildTitle(){
+   817→  const el = document.getElementById('title');
+   818→  const frag = document.createElement('div');
+   819→  frag.setAttribute('aria-hidden', 'true');
+   820→  frag.innerHTML = TITLE.split(' ').map(w => {
+   821→    if (w === 'алгоритмов') return `<span class="word accent ch">${w}</span>`;
+   822→    return `<span class="word">${[...w].map(c => `<span class="ch">${c}</span>`).join('')}</span>`;
+   823→  }).join(' ');
+   824→  el.appendChild(frag);
+   825→}
+   826→
+   827→// Печатная машинка для слогана
+   828→function typeText(){
+   829→  const el = document.getElementById('slogan-text');
+   830→  if (REDUCED){ el.textContent = SLOGAN; return Promise.resolve(); }
+   831→  document.body.classList.add('typing');
+   832→  return new Promise(res => {
+   833→    let i = 0;
+   834→    (function tick(){
+   835→      i++; el.textContent = SLOGAN.slice(0, i);
+   836→      if (i < SLOGAN.length) setTimeout(tick, rand(24, 58));
+   837→      else res();
+   838→    })();
+   839→  });
+   840→}
+   841→
+   842→/* ------------------------------------------------------------
+   843→   5. ЗВУК (Web Audio, генерируется на лету — без файлов)
+   844→   Дрон-фон + мягкие бипы + «вжух» на переходе.
+   845→   ------------------------------------------------------------ */
+   846→const Sound = {
+   847→  ctx: null, master: null, noiseBuf: null, muted: true,
+   848→  ensure(){
+   849→    if (this.ctx) return true;
+   850→    try{
+   851→      const AC = window.AudioContext || window.webkitAudioContext;
+   852→      if (!AC) return false;
+   853→      this.ctx = new AC();
+   854→      this.master = this.ctx.createGain();
+   855→      this.master.gain.value = 0;
+   856→      this.master.connect(this.ctx.destination);
+   857→      // фильтр + три расстроенных осциллятора = космический дрон
+   858→      const filt = this.ctx.createBiquadFilter();
+   859→      filt.type = 'lowpass'; filt.frequency.value = 240; filt.Q.value = 0.6;
+   860→      filt.connect(this.master);
+   861→      [[55, 'sine', 0.5], [55.6, 'sine', 0.5], [110.4, 'triangle', 0.12]].forEach(([f, t, v]) => {
+   862→        const o = this.ctx.createOscillator(); o.type = t; o.frequency.value = f;
+   863→        const g = this.ctx.createGain(); g.gain.value = v;
+   864→        o.connect(g); g.connect(filt); o.start();
+   865→      });
+   866→      // медленный LFO дышит фильтром
+   867→      const lfo = this.ctx.createOscillator(); lfo.frequency.value = 0.06;
+   868→      const lg = this.ctx.createGain(); lg.gain.value = 110;
+   869→      lfo.connect(lg); lg.connect(filt.frequency); lfo.start();
+   870→      // тихий шумовой «воздух» (он же источник для whoosh)
+   871→      const nb = this.ctx.createBuffer(1, this.ctx.sampleRate * 2, this.ctx.sampleRate);
+   872→      const d = nb.getChannelData(0);
+   873→      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+   874→      this.noiseBuf = nb;
+   875→      const ns = this.ctx.createBufferSource(); ns.buffer = nb; ns.loop = true;
+   876→      const nf = this.ctx.createBiquadFilter(); nf.type = 'bandpass';
+   877→      nf.frequency.value = 420; nf.Q.value = 0.5;
+   878→      const ng = this.ctx.createGain(); ng.gain.value = 0.015;
+   879→      ns.connect(nf); nf.connect(ng); ng.connect(this.master); ns.start();
+   880→      return true;
+   881→    } catch(e){ return false; }
+   882→  },
+   883→  toggle(){
+   884→    if (!this.ensure()) return this.muted;
+   885→    if (this.ctx.resume) this.ctx.resume();
+   886→    this.muted = !this.muted;
+   887→    const t = this.ctx.currentTime;
+   888→    this.master.gain.cancelScheduledValues(t);
+   889→    this.master.gain.linearRampToValueAtTime(this.muted ? 0 : 0.055, t + 0.5);
+   890→    const btn = document.getElementById('mute-btn');
+   891→    btn.classList.toggle('unmuted', !this.muted);
+   892→    btn.setAttribute('aria-pressed', String(!this.muted));
+   893→    return this.muted;
+   894→  },
+   895→  blip(){                                  // тёплый короткий клик
+   896→    if (!this.ctx || this.muted) return;
+   897→    const t = this.ctx.currentTime;
+   898→    const o = this.ctx.createOscillator(); o.type = 'sine';
+   899→    o.frequency.setValueAtTime(540, t);
+   900→    o.frequency.exponentialRampToValueAtTime(320, t + 0.16);
+   901→    const g = this.ctx.createGain();
+   902→    g.gain.setValueAtTime(0.0001, t);
+   903→    g.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
+   904→    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+   905→    o.connect(g); g.connect(this.ctx.destination);
+   906→    o.start(t); o.stop(t + 0.25);
+   907→  },
+   908→  whoosh(){                                // шумовой подъём для zoom-перехода
+   909→    if (!this.ctx || this.muted) return;
+   910→    const t = this.ctx.currentTime;
+   911→    const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuf;
+   912→    const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
+   913→    f.frequency.setValueAtTime(180, t);
+   914→    f.frequency.exponentialRampToValueAtTime(2400, t + 1.5);
+   915→    const g = this.ctx.createGain();
+   916→    g.gain.setValueAtTime(0.0001, t);
+   917→    g.gain.exponentialRampToValueAtTime(0.28, t + 1.2);
+   918→    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.7);
+   919→    src.connect(f); f.connect(g); g.connect(this.ctx.destination);
+   920→    src.start(t); src.stop(t + 1.8);
+   921→  }
+   922→};
+   923→document.getElementById('mute-btn').addEventListener('click', () => Sound.toggle());
+   924→
+   925→/* ------------------------------------------------------------
+   926→   6. КАСТОМНЫЙ КУРСОР (только точные указатели)
+   927→   ------------------------------------------------------------ */
+   928→const dotEl  = document.getElementById('cursor-dot');
+   929→const ringEl = document.getElementById('cursor-ring');
+   930→let cursorShown = false, domHover = false;
+   931→let ringX = -100, ringY = -100;
+   932→
+   933→function refreshRing(){
+   934→  ringEl.classList.toggle('is-hover', domHover || !!hoverNode);
+   935→}
+   936→if (FINE_POINTER){
+   937→  document.documentElement.classList.add('has-cursor');
+   938→  document.addEventListener('mouseover', e => {
+   939→    domHover = !!(e.target.closest && e.target.closest('[data-hover]'));
+   940→    refreshRing();
+   941→  });
+   942→  window.addEventListener('mousedown', () => ringEl.classList.add('is-down'));
+   943→  window.addEventListener('mouseup',   () => ringEl.classList.remove('is-down'));
+   944→  document.addEventListener('mouseleave', () => document.documentElement.classList.remove('cursor-on'));
+   945→  document.addEventListener('mouseenter', () => { if (cursorShown) document.documentElement.classList.add('cursor-on'); });
+   946→}
+   947→function updateCursor(){
+   948→  if (!FINE_POINTER) return;
+   949→  ringX = lerp(ringX, mouse.x, 0.18);
+   950→  ringY = lerp(ringY, mouse.y, 0.18);
+   951→  dotEl.style.transform  = `translate3d(${mouse.x}px,${mouse.y}px,0) translate(-50%,-50%)`;
+   952→  ringEl.style.transform = `translate3d(${ringX}px,${ringY}px,0) translate(-50%,-50%)`;
+   953→}
+   954→
+   955→/* ------------------------------------------------------------
+   956→   7. GSAP-СЦЕНЫ
+   957→   ------------------------------------------------------------ */
+   958→const flash = document.getElementById('flash');
+   959→
+   960→// Интро: сборка частиц → узлы → надзаголовок → буквы → слоган → кнопка
+   961→function startIntro(){
+   962→  introActive = true;
+   963→
+   964→  // Статичный режим: reduced motion или GSAP не загрузился с CDN
+   965→  if (REDUCED || !HAS_GSAP){
+   966→    document.body.classList.add('reveal-static');
+   967→    worldState.edge = 1; worldState.node = 1;
+   968→    typeText().then(() => document.body.classList.add('reveal-static'));
+   969→    return;
+   970→  }
+   971→
+   972→  // 1) частицы слетаются в шесть узлов
+   973→  gsap.to(particles.filter(p => p.node >= 0), {
+   974→    assemble: 1, duration: 2.6, ease: 'power2.inOut',
+   975→    stagger: { each: 0.005, from: 'random' }
+   976→  });
+   977→  // 2) связи и узлы проявляются
+   978→  gsap.to(worldState, { edge: 1, node: 1, duration: 2.4, delay: 1.0, ease: 'power2.out' });
+   979→
+   980→  // 3) типографская сцена
+   981→  const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+   982→  tl.to('.overtitle', { opacity: 1, duration: 1.0 }, 0.9)
+   983→    .from('.overtitle .line', { scaleX: 0, duration: 1.1, ease: 'power2.inOut' }, 0.9)
+   984→    .from('.ch', { y: 36, opacity: 0, filter: 'blur(10px)', duration: 0.9, stagger: 0.022 }, 1.15)
+   985→    .add(() => {
+   986→      typeText().then(() => {
+   987→        gsap.to('#enter-btn', { opacity: 1, y: 0, duration: 1.0, ease: 'power3.out' });
+   988→        gsap.to('#hint',      { opacity: 1, duration: 1.0, delay: 0.35 });
+   989→      });
+   990→    })
+   991→    .to('#mute-btn', { opacity: 1, duration: 1.0 }, 0.9);
+   992→}
+   993→
+   994→// Вход с интро: zoom-влёт сквозь узел → появление карты (экран 1)
+   995→function enterTo(node){
+   996→  if (entering || !introActive) return;
+   997→  entering = true;
+   998→  hoverNode = null;
+   999→  nodes.forEach(n => n.hover = false);
+  1000→  Sound.blip();
+  1001→
+  1002→  // вспышка окрашивается цветом философа
+  1003→  flash.style.background =
+  1004→    `radial-gradient(circle at 50% 50%, #ffffff 0%, ${node.color} 46%, ${hexToRgba(node.color, 0.92)} 100%)`;
+  1005→
+  1006→  if (HAS_GSAP && !REDUCED){
+  1007→    Sound.whoosh();
+  1008→    gsap.timeline()
+  1009→      .to(['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'], {
+  1010→        opacity: 0, y: -26, duration: 0.5, stagger: 0.05, ease: 'power2.in'
+  1011→      })
+  1012→      .add(() => {
+  1013→        // камера летит в узел
+  1014→        gsap.to(cam, { z: 15, x: node.px, y: node.py, duration: 1.6, ease: 'power3.in' });
+  1015→      })
+  1016→      .to(flash, { opacity: 1, duration: 0.5, ease: 'power2.in' }, '-=0.15')
+  1017→      .add(() => showMap(true));
+  1018→  } else {
+  1019→    // простой переход без анимаций
+  1020→    document.getElementById('intro').style.opacity = 0;
+  1021→    flash.style.transition = 'opacity .45s linear';
+  1022→    flash.style.opacity = 1;
+  1023→    setTimeout(() => showMap(true), 480);
+  1024→  }
+  1025→}
+  1026→
+  1027→/* ------------------------------------------------------------
+  1028→   8. ЭКРАН 1 · КАРТА (SVG-ГРАФ) И НАВИГАЦИЯ
+  1029→   Маршрут: интро → карта → мир;  назад: мир → карта → интро
+  1030→   ------------------------------------------------------------ */
+  1031→const MAP_W = 1200, MAP_H = 700;
+  1032→const mapScreen   = document.getElementById('map-screen');
+  1033→const worldScreen = document.getElementById('world-screen');
+  1034→const mapSvg      = document.getElementById('map-svg');
+  1035→const mapCard     = document.getElementById('map-card');
+  1036→const NSVG = 'http://www.w3.org/2000/svg';
+  1037→
+  1038→function svgEl(tag, attrs = {}){
+  1039→  const el = document.createElementNS(NSVG, tag);
+  1040→  for (const k in attrs) el.setAttribute(k, attrs[k]);
+  1041→  return el;
+  1042→}
+  1043→
+  1044→/* На узких экранах «приближаем» viewBox к созвездию,
+  1045→   чтобы узлы и подписи остались читабельными */
+  1046→function updateMapViewBox(){
+  1047→  mapSvg.setAttribute('viewBox', W < 640 ? '160 40 900 680' : `0 0 ${MAP_W} ${MAP_H}`);
+  1048→}
+  1049→
+  1050→/* --- Построение графа: градиенты → рёбра → импульсы → узлы --- */
+  1051→function buildMap(){
+  1052→  mapSvg.innerHTML = '';
+  1053→  const defs = svgEl('defs');
+  1054→
+  1055→  // свечение каждого узла в цвет философа
+  1056→  PHILOSOPHERS.forEach(p => {
+  1057→    const g = svgEl('radialGradient', { id: 'ng-' + p.id });
+  1058→    [[0, .85], [.4, .25], [1, 0]].forEach(([o, a]) => {
+  1059→      g.appendChild(svgEl('stop', { offset: o, 'stop-color': p.color, 'stop-opacity': a }));
+  1060→    });
+  1061→    defs.appendChild(g);
+  1062→  });
+  1063→  // градиент каждого ребра — от цвета узла к цвету узла
+  1064→  EDGES.forEach(([a, b], i) => {
+  1065→    const A = PHILOSOPHERS[a], B = PHILOSOPHERS[b];
+  1066→    const g = svgEl('linearGradient', {
+  1067→      id: 'eg-' + i, gradientUnits: 'userSpaceOnUse',
+  1068→      x1: A.mx, y1: A.my, x2: B.mx, y2: B.my
+  1069→    });
+  1070→    g.appendChild(svgEl('stop', { offset: 0, 'stop-color': A.color, 'stop-opacity': .55 }));
+  1071→    g.appendChild(svgEl('stop', { offset: 1, 'stop-color': B.color, 'stop-opacity': .55 }));
+  1072→    defs.appendChild(g);
+  1073→  });
+  1074→  mapSvg.appendChild(defs);
+  1075→
+  1076→  // рёбра
+  1077→  EDGES.forEach(([a, b], i) => {
+  1078→    const A = PHILOSOPHERS[a], B = PHILOSOPHERS[b];
+  1079→    const line = svgEl('line', {
+  1080→      class: 'map-edge', x1: A.mx, y1: A.my, x2: B.mx, y2: B.my,
+  1081→      stroke: `url(#eg-${i})`, 'stroke-width': 1
+  1082→    });
+  1083→    mapSvg.appendChild(line);
+  1084→    if (HAS_GSAP && !REDUCED){
+  1085→      // рисование линии при входе на карту
+  1086→      const L = Math.hypot(B.mx - A.mx, B.my - A.my);
+  1087→      line.style.strokeDasharray = L;
+  1088→      line.style.strokeDashoffset = L;
+  1089→      // бегущий импульс — «пакет данных» в нейросети идей
+  1090→      const dot = svgEl('circle', { class: 'map-pulse', r: 1.7, fill: '#cfd6ff', opacity: 0 });
+  1091→      mapSvg.appendChild(dot);
+  1092→      const o = { t: 0 };
+  1093→      gsap.to(o, {
+  1094→        t: 1, duration: rand(5, 9), delay: rand(1, 6),
+  1095→        repeat: -1, repeatDelay: rand(2, 6), ease: 'none',
+  1096→        onStart: () => gsap.set(dot, { opacity: .6 }),
+  1097→        onUpdate: () => {
+  1098→          dot.setAttribute('cx', lerp(A.mx, B.mx, o.t));
+  1099→          dot.setAttribute('cy', lerp(A.my, B.my, o.t));
+  1100→        }
+  1101→      });
+  1102→    }
+  1103→  });
+  1104→
+  1105→  // узлы
+  1106→  PHILOSOPHERS.forEach((p, i) => {
+  1107→    const g = svgEl('g', {
+  1108→      class: 'map-node', 'data-hover': '', 'data-i': i,
+  1109→      tabindex: 0, role: 'button', 'aria-label': `Мир философа: ${p.name}`
+  1110→    });
+  1111→    g.setAttribute('transform', `translate(${p.mx} ${p.my})`);
+  1112→    g.style.setProperty('--c', p.color);
+  1113→    const glow = svgEl('circle', { class: 'node-glow', r: 42, fill: `url(#ng-${p.id})` });
+  1114→    glow.style.animation = `glowPulse ${(3.2 + i * 0.35).toFixed(2)}s ease-in-out ${(i * 0.4).toFixed(2)}s infinite`;
+  1115→    const ring = svgEl('circle', { class: 'node-ring', r: 22, fill: 'rgba(10,10,15,.55)', stroke: p.color, 'stroke-width': 1.2 });
+  1116→    const core = svgEl('circle', { class: 'node-core', r: 4.5, fill: '#fff' });
+  1117→    const label = svgEl('text', { class: 'node-label', y: 48 });
+  1118→    label.textContent = p.name.toUpperCase();
+  1119→    g.append(glow, ring, core, label);
+  1120→    mapSvg.appendChild(g);
+  1121→    if (HAS_GSAP) gsap.set(g, { transformOrigin: 'center' });
+  1122→  });
+  1123→
+  1124→  updateMapViewBox();
+  1125→}
+  1126→
+  1127→/* --- Мини-карточка при наведении на узел --- */
+  1128→let cardShown = false;
+  1129→function showCard(g){
+  1130→  const p = PHILOSOPHERS[+g.dataset.i];
+  1131→  mapCard.style.setProperty('--cc', p.color);
+  1132→  mapCard.querySelector('.mc-name').textContent  = p.name;
+  1133→  mapCard.querySelector('.mc-years').textContent = p.years;
+  1134→  mapCard.querySelector('.mc-idea').textContent  = p.idea;
+  1135→  // позиция — по фактическому прямоугольнику узла на экране
+  1136→  const ringR = g.querySelector('.node-ring').getBoundingClientRect();
+  1137→  const wrap  = document.getElementById('map-wrap').getBoundingClientRect();
+  1138→  const cx = ringR.left + ringR.width / 2 - wrap.left;
+  1139→  const cy = ringR.top + ringR.height / 2 - wrap.top;
+  1140→  const cw = mapCard.offsetWidth, ch = mapCard.offsetHeight;
+  1141→  const x = Math.max(10, Math.min(wrap.width - cw - 10, cx - cw / 2));
+  1142→  const above = cy > wrap.height * 0.52;          // карточка снизу или сверху узла
+  1143→  const gap = ringR.height / 2 + 16;
+  1144→  let y = above ? cy - gap - ch : cy + gap;
+  1145→  y = Math.max(8, Math.min(wrap.height - ch - 8, y));
+  1146→  mapCard.style.left = x + 'px';
+  1147→  mapCard.style.top = y + 'px';
+  1148→  cardShown = true;
+  1149→  if (HAS_GSAP && !REDUCED){
+  1150→    gsap.fromTo(mapCard, { opacity: 0, y: above ? 10 : -10, scale: .96 },
+  1151→      { opacity: 1, y: 0, scale: 1, duration: .32, ease: 'power2.out', overwrite: true });
+  1152→  } else {
+  1153→    mapCard.style.opacity = 1;
+  1154→  }
+  1155→}
+  1156→function hideCard(){
+  1157→  if (!cardShown) return;
+  1158→  cardShown = false;
+  1159→  if (HAS_GSAP && !REDUCED) gsap.to(mapCard, { opacity: 0, duration: .22, overwrite: true });
+  1160→  else mapCard.style.opacity = 0;
+  1161→}
+  1162→
+  1163→/* --- Атмосфера canvas-фона под каждый экран --- */
+  1164→function setAmbient(edge, node, z, dur){
+  1165→  if (HAS_GSAP && !REDUCED){
+  1166→    gsap.to(worldState, { edge, node, duration: dur, ease: 'power2.out', overwrite: 'auto' });
+  1167→    gsap.to(cam, { z, x: W / 2, y: H / 2, duration: dur, ease: 'power2.out', overwrite: 'auto' });
+  1168→  } else {
+  1169→    worldState.edge = edge; worldState.node = node;
+  1170→    cam.z = z; cam.x = W / 2; cam.y = H / 2;
+  1171→  }
+  1172→}
+  1173→
+  1174→/* --- Показ карты (first = с отрисовкой рёбер) --- */
+  1175→function showMap(first){
+  1176→  worldScreen.hidden = true; worldScreen.style.opacity = '';
+  1177→  mapScreen.hidden = false;
+  1178→  introActive = false;
+  1179→  setAmbient(0.3, 0.35, 1.15, 2.4);
+  1180→  if (HAS_GSAP && !REDUCED){
+  1181→    if (first){
+  1182→      gsap.fromTo(mapScreen, { opacity: 0 }, { opacity: 1, duration: .7, ease: 'power2.out' });
+  1183→      gsap.to(flash, { opacity: 0, duration: 1.1, delay: .3, ease: 'power2.out' });
+  1184→      gsap.timeline({ onComplete: () => { entering = false; } })
+  1185→        .fromTo('.map-head > *', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: .8, stagger: .1, ease: 'power3.out' }, .15)
+  1186→        .to('.map-edge', { strokeDashoffset: 0, duration: 1.3, stagger: .1, ease: 'power2.inOut' }, .4)
+  1187→        .fromTo('.map-node', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: .8, stagger: .09, ease: 'back.out(1.6)' }, .6)
+  1188→        .fromTo(['#map-hint', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .8 }, '-=0.3');
+  1189→    } else {
+  1190→      gsap.fromTo(mapScreen, { opacity: 0 }, { opacity: 1, duration: .5, ease: 'power2.out' });
+  1191→      gsap.timeline({ onComplete: () => { entering = false; } })
+  1192→        .fromTo('.map-head > *', { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .6, stagger: .07, ease: 'power2.out' }, .1)
+  1193→        .fromTo('.map-node', { scale: .55, opacity: 0 }, { scale: 1, opacity: 1, duration: .65, stagger: .05, ease: 'back.out(1.7)' }, .15)
+  1194→        .fromTo(['#map-hint', '#map-back'], { opacity: 0 }, { opacity: 1, duration: .6 }, .5);
+  1195→    }
+  1196→  } else {
+  1197→    flash.style.opacity = 0;
+  1198→    entering = false;
+  1199→  }
+  1200→}
+  1201→
+  1202→/* --- Влёт в мир философа (клик по узлу карты) --- */
+  1203→function flyToWorld(p, g){
+  1204→  if (entering) return;
+  1205→  entering = true;
+  1206→  hideCard();
+  1207→  g.classList.remove('hot');
+  1208→  Sound.blip();
+  1209→  flash.style.background =
+  1210→    `radial-gradient(circle at 50% 50%, #ffffff 0%, ${p.color} 46%, ${hexToRgba(p.color, .92)} 100%)`;
+  1211→  if (HAS_GSAP && !REDUCED){
+  1212→    Sound.whoosh();
+  1213→    // зумим сам SVG в точку узла (origin — экранный центр кольца)
+  1214→    const ringR = g.querySelector('.node-ring').getBoundingClientRect();
+  1215→    const svgR  = mapSvg.getBoundingClientRect();
+  1216→    const ox = ringR.left + ringR.width / 2 - svgR.left;
+  1217→    const oy = ringR.top + ringR.height / 2 - svgR.top;
+  1218→    gsap.timeline()
+  1219→      .to(['.map-head > *', '#map-hint', '#map-back'],
+  1220→        { opacity: 0, y: -16, duration: .4, stagger: .04, ease: 'power2.in' })
+  1221→      .to(mapSvg, { scale: 9, transformOrigin: `${ox}px ${oy}px`, duration: 1.5, ease: 'power3.in' }, .1)
+  1222→      .to(flash, { opacity: 1, duration: .5, ease: 'power2.in' }, 1.15)
+  1223→      .add(() => showWorld(p));
+  1224→  } else {
+  1225→    flash.style.transition = 'opacity .45s linear';
+  1226→    flash.style.opacity = 1;
+  1227→    setTimeout(() => showWorld(p), 480);
+  1228→  }
+  1229→}
+  1230→
+  1231→/* --- Превью мира философа (часть 2 заменит полным экраном) --- */
+  1232→function showWorld(p){
+  1233→  worldScreen.style.setProperty('--wc', p.color);
+  1234→  worldScreen.style.background =
+  1235→    `radial-gradient(1000px 640px at 50% 40%, ${hexToRgba(p.color, .16)}, transparent 70%), #0a0a0f`;
+  1236→  document.getElementById('w-name').textContent  = p.name;
+  1237→  document.getElementById('w-years').textContent = p.years;
+  1238→  document.getElementById('w-idea').textContent  = p.idea;
+  1239→  document.getElementById('w-quote').textContent = '«' + p.quote + '»';
+  1240→  mapScreen.hidden = true;
+  1241→  if (HAS_GSAP) gsap.set(mapSvg, { clearProps: 'transform' });   // сброс влёта под покровом вспышки
+  1242→  worldScreen.hidden = false;
+  1243→  setAmbient(0.12, 0.16, 1.05, 1.6);
+  1244→  entering = false;
+  1245→  if (HAS_GSAP && !REDUCED){
+  1246→    gsap.fromTo(worldScreen, { opacity: 0 }, { opacity: 1, duration: .6, ease: 'power2.out' });
+  1247→    gsap.fromTo('#world-screen .w-in',
+  1248→      { y: 26, opacity: 0 },
+  1249→      { y: 0, opacity: 1, duration: .9, stagger: .09, ease: 'power3.out', delay: .1 });
+  1250→    gsap.to(flash, { opacity: 0, duration: 1.1, delay: .25, ease: 'power2.out' });
+  1251→  } else {
+  1252→    flash.style.opacity = 0;
+  1253→  }
+  1254→}
+  1255→
+  1256→/* --- Назад: мир → карта --- */
+  1257→function backToMap(){
+  1258→  if (entering || worldScreen.hidden) return;
+  1259→  entering = true;
+  1260→  Sound.blip();
+  1261→  setAmbient(0.3, 0.35, 1.15, 1.6);
+  1262→  if (HAS_GSAP && !REDUCED){
+  1263→    gsap.to(worldScreen, {
+  1264→      opacity: 0, duration: .45, ease: 'power2.in',
+  1265→      onComplete: () => { worldScreen.hidden = true; worldScreen.style.opacity = ''; showMap(false); }
+  1266→    });
+  1267→  } else {
+  1268→    worldScreen.hidden = true;
+  1269→    showMap(false);
+  1270→  }
+  1271→}
+  1272→
+  1273→/* --- Назад: карта → интро --- */
+  1274→function mapToIntro(){
+  1275→  if (entering || mapScreen.hidden) return;
+  1276→  entering = true;
+  1277→  Sound.blip();
+  1278→  hideCard();
+  1279→  setAmbient(1, 1, 1, 1.8);
+  1280→  if (HAS_GSAP && !REDUCED){
+  1281→    gsap.to(mapScreen, {
+  1282→      opacity: 0, duration: .55, ease: 'power2.in',
+  1283→      onComplete: () => { mapScreen.hidden = true; mapScreen.style.opacity = ''; }
+  1284→    });
+  1285→    gsap.to(['#intro .overtitle', '#title', '#slogan', '#enter-btn', '#hint'],
+  1286→      { opacity: 1, y: 0, duration: .8, stagger: .06, delay: .5, ease: 'power2.out' });
+  1287→  } else {
+  1288→    mapScreen.hidden = true;
+  1289→    document.getElementById('intro').style.opacity = 1;
+  1290→  }
+  1291→  introActive = true;
+  1292→  entering = false;
+  1293→}
+  1294→
+  1295→/* --- События карты: ховер, клик, клавиатура --- */
+  1296→mapSvg.addEventListener('mouseover', e => {
+  1297→  const g = e.target.closest('.map-node');
+  1298→  if (!g || entering) return;
+  1299→  g.classList.add('hot');
+  1300→  if (HAS_GSAP && !REDUCED) gsap.to(g, { scale: 1.22, duration: .35, ease: 'power2.out', overwrite: 'auto' });
+  1301→  showCard(g);
+  1302→});
+  1303→mapSvg.addEventListener('mouseout', e => {
+  1304→  const g = e.target.closest('.map-node');
+  1305→  if (!g || (e.relatedTarget && g.contains(e.relatedTarget))) return;
+  1306→  g.classList.remove('hot');
+  1307→  if (HAS_GSAP && !REDUCED) gsap.to(g, { scale: 1, duration: .4, ease: 'power2.out', overwrite: 'auto' });
+  1308→  hideCard();
+  1309→});
+  1310→mapSvg.addEventListener('click', e => {
+  1311→  const g = e.target.closest('.map-node');
+  1312→  if (!g) return;
+  1313→  flyToWorld(PHILOSOPHERS[+g.dataset.i], g);
+  1314→});
+  1315→mapSvg.addEventListener('keydown', e => {
+  1316→  if (e.key !== 'Enter' && e.key !== ' ') return;
+  1317→  const g = e.target.closest('.map-node');
+  1318→  if (!g) return;
+  1319→  e.preventDefault();
+  1320→  flyToWorld(PHILOSOPHERS[+g.dataset.i], g);
+  1321→});
+  1322→document.getElementById('world-back').addEventListener('click', backToMap);
+  1323→document.getElementById('map-back').addEventListener('click', mapToIntro);
+  1324→window.addEventListener('keydown', e => {
+  1325→  if (e.key !== 'Escape') return;
+  1326→  if (!worldScreen.hidden) backToMap();
+  1327→  else if (!mapScreen.hidden) mapToIntro();
+  1328→});
+  1329→
+  1330→document.getElementById('enter-btn').addEventListener('click', () => {
+  1331→  // кнопка ведёт к случайному узлу — каждый вход чуть иной
+  1332→  enterTo(nodes[Math.floor(Math.random() * nodes.length)]);
+  1333→});
+  1334→
+  1335→/* ------------------------------------------------------------
+  1336→   ИНИЦИАЛИЗАЦИЯ
+  1337→   ------------------------------------------------------------ */
+  1338→buildTitle();
+  1339→resize();
+  1340→initStars();
+  1341→initParticles();
+  1342→buildMap();
+  1343→window.addEventListener('resize', () => { resize(); initStars(); updateMapViewBox(); });
+  1344→requestAnimationFrame(loop);
+  1345→requestAnimationFrame(tickPre);
+  1346→
+  1347→/* ------------------------------------------------------------
+  1348→   ТОЧКИ РАСШИРЕНИЯ · ЧАСТИ 2–4
+  1349→   Часть 2 (миры): #world-screen заменяется полным миром философа
+  1350→     (портрет SVG/CSS, идеи, цитаты, блок «А что бы он сказал
+  1351→     про алгоритмы?»); точка входа — showWorld(p)/flyToWorld(p, g).
+  1352→   Часть 3 (тест): 8 вопросов, прогресс-бар, «анализ», результат.
+  1353→   Часть 4 (финал): «Алгоритм предлагает. Выбираешь — ты».
+  1354→   Скролл-анимации: ScrollTrigger уже зарегистрирован;
+  1355→     Lenis подключается строкой в <head> (см. комментарий там).
+  1356→   ------------------------------------------------------------ */
+  1357→</script>
+  1358→</body>
+  1359→</html>
+  1360→

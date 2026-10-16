@@ -8,18 +8,21 @@
 <meta name="description" content="Интерактивное путешествие по великим идеям философии. Сквозной вопрос: кто принимает твои решения — ты или алгоритм?">
 
 <!-- ============================================================
-  ФИЛОСОФИЯ В ЭПОХУ АЛГОРИТМОВ · ЧАСТЬ 0 (прелоадер + интро)
+  ФИЛОСОФИЯ В ЭПОХУ АЛГОРИТМОВ
+  Часть 0 · прелоадер + интро  |  Часть 1 · карта идей (SVG-граф)
+  Часть 2 · миры философов ×6  |  Части 3–4 · тест + финал (далее)
   ------------------------------------------------------------
   Структура файла:
     1. Шрифты (Inter — интерфейс, Cormorant — заголовки/цитаты)
-    2. GSAP + ScrollTrigger через CDN (Lenis подключим в части 1,
-       когда появится скролл — строка уже заготовлена ниже)
+    2. GSAP + ScrollTrigger через CDN (скролл используется только
+       внутри миров — нативный контейнер, Lenis не нужен)
     3. CSS: переменные → курсор → прелоадер → сцена → интро
-       → звук → плейсхолдер части 1 → адаптив → reduced-motion
+       → звук → карта → мир философа → адаптив → reduced-motion
     4. JS: конфиг → утилиты → canvas-мир (частицы/узлы/камера)
        → прелоадер → типографика → звук → курсор → GSAP-сцены
-  Части 1–4 (карта, миры философов, тест, финал) подключаются
-  в точках расширения — ищите комментарий "ТОЧКИ РАСШИРЕНИЯ".
+       → карта → мир философа (портрет-созвездие, ScrollTrigger)
+  Части 3–4 (тест, финал) подключаются в точках расширения —
+  ищите комментарий "ТОЧКИ РАСШИРЕНИЯ".
 ============================================================ -->
 
 <!-- Шрифты Google Fonts -->
@@ -30,7 +33,9 @@
 <!-- GSAP: ядро + ScrollTrigger (нужен с части 1 для скролл-анимаций) -->
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
-<!-- ЧАСТЬ 1: плавный скролл — раскомментируйте вместе с картой
+<!-- Lenis (плавный скролл) НЕ нужен: скролл остаётся только внутри
+     миров философов (#world-scroll — нативный контейнер, его слушает
+     ScrollTrigger). Строка оставлена как справка.
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script> -->
 
 <style>
@@ -281,27 +286,111 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 #map-back{ position:absolute; top:calc(18px + var(--safe-t)); left:20px }
 
 /* ==========================================================
-   7. ЭКРАН 2 · ПРЕВЬЮ МИРА ФИЛОСОФА (часть 2 заменит его полным миром)
+   7. ЭКРАН 2 · МИР ФИЛОСОФА (шаблон ×6) — ЧАСТЬ 2
+   Цвет философа и производные ставит JS (mountWorld):
+   --wc (цвет), --wc-line (линии/рамки), --wc-bg (подложки)
    ========================================================== */
 #world-screen{
   position:absolute; inset:0; z-index:22;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  text-align:center; padding:24px;
+  --wc: var(--gold);
+  --wc-line: rgba(232,184,75,.30);
+  --wc-bg:  rgba(232,184,75,.10);
 }
 #world-screen[hidden]{ display:none }
-.w-kicker{ color:var(--wc, var(--gold)) }
+/* внутренний скролл: мир может быть выше экрана (нативный скролл,
+   ScrollTrigger слушает именно этот контейнер) */
+#world-scroll{
+  position:absolute; inset:0; overflow-y:auto;
+  overscroll-behavior:contain; -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin; scrollbar-color:rgba(237,237,242,.16) transparent;
+}
+#world-scroll::-webkit-scrollbar{ width:8px }
+#world-scroll::-webkit-scrollbar-track{ background:transparent }
+#world-scroll::-webkit-scrollbar-thumb{ background:rgba(237,237,242,.14); border-radius:99px }
+#world-scroll::-webkit-scrollbar-thumb:hover{ background:rgba(237,237,242,.28) }
+/* линия чтения — глубина погружения в мир */
+#world-progress{
+  position:absolute; top:0; left:0; right:0; height:2px; z-index:6;
+  transform:scaleX(0); transform-origin:left; pointer-events:none;
+  background:linear-gradient(90deg, var(--wc-line), var(--wc));
+  box-shadow:0 0 14px var(--wc);
+}
+.ws-inner{
+  width:min(760px, 100%); margin:0 auto;
+  padding:clamp(96px, 13vh, 150px) 24px calc(76px + var(--safe-b));
+  display:flex; flex-direction:column; align-items:center; text-align:center;
+}
+.ws-kicker{ color:var(--wc); margin-bottom:26px }
+/* --- портрет-созвездие (генеративный SVG из JS) --- */
+.ws-portrait{ width:clamp(148px, 20vh, 204px); margin-bottom:12px; filter:drop-shadow(0 0 26px var(--wc-line)) }
+.ws-portrait svg{ display:block; width:100%; height:auto; overflow:visible }
+.ws-orbit{ transform-box:view-box; transform-origin:75px 95px; animation:orbitSpin 18s linear infinite }
+@keyframes orbitSpin{ to{ transform:rotate(360deg) } }
+.ws-epithet{
+  font:400 11px/1 var(--sans); letter-spacing:.34em; text-indent:.34em;
+  text-transform:uppercase; color:var(--dim); margin-top:14px; margin-bottom:16px;
+}
 .w-name{
-  font:500 clamp(44px, 6vw, 84px)/1.05 var(--serif); color:var(--ink);
-  margin:18px 0 10px; text-shadow:0 0 60px var(--wc, transparent);
+  font:500 clamp(40px, 6vw, 78px)/1.06 var(--serif); color:var(--ink);
+  text-shadow:0 0 64px var(--wc-line);
 }
-.w-years{ font:400 12px/1 var(--sans); letter-spacing:.3em; text-indent:.3em; color:var(--dim); margin-bottom:26px }
-.w-idea{ font:300 clamp(14px, 1.6vw, 16.5px)/1.8 var(--sans); color:rgba(237,237,242,.78); max-width:560px; margin-bottom:26px }
+.w-name .word{ display:inline-block; white-space:nowrap }
+.w-name .ch{ display:inline-block; will-change:transform,opacity }
+.w-years{
+  font:400 11.5px/1.8 var(--sans); letter-spacing:.3em; text-indent:.3em;
+  color:var(--dim); margin-top:14px;
+}
+/* --- секции мира --- */
+.ws-sec{ width:100%; margin-top:clamp(40px, 6.5vh, 66px); text-align:left }
+.ws-label{
+  display:flex; align-items:center; gap:14px;
+  font:500 11px/1.3 var(--sans); letter-spacing:.28em; text-indent:.28em;
+  text-transform:uppercase; color:var(--wc);
+}
+.ws-label::after{ content:''; flex:1; height:1px; background:linear-gradient(90deg, var(--wc-line), transparent) }
+.ws-idea-text{
+  margin-top:20px;
+  font:300 clamp(14.5px, 1.65vw, 17px)/1.85 var(--sans);
+  color:rgba(237,237,242,.8);
+}
+/* цитата */
+.ws-quote-sec{ text-align:center }
+.ws-quote-mark{ display:block; font:500 64px/0.35 var(--serif); color:var(--wc); opacity:.4 }
 .w-quote{
-  font:italic 500 clamp(20px, 2.4vw, 30px)/1.4 var(--serif);
-  color:var(--wc, #fff); text-shadow:0 0 34px var(--wc, transparent);
-  max-width:640px; margin-bottom:30px;
+  font:italic 500 clamp(21px, 2.9vw, 33px)/1.4 var(--serif);
+  color:var(--wc); text-shadow:0 0 44px var(--wc-line);
 }
-.w-note{ font:300 12.5px/1.9 var(--sans); color:rgba(237,237,242,.42); max-width:480px; margin-bottom:38px }
+.ws-quote-src{
+  margin-top:16px; font:400 11px/1 var(--sans);
+  letter-spacing:.22em; text-indent:.22em; text-transform:uppercase; color:var(--dim);
+}
+/* блок «А что бы он сказал про алгоритмы?» */
+.ws-algo-card{
+  margin-top:20px; position:relative; overflow:hidden;
+  border:1px solid var(--wc-line); border-radius:18px;
+  padding:clamp(20px, 3.2vw, 30px);
+  background:linear-gradient(180deg, var(--wc-bg), rgba(10,10,15,.5));
+  backdrop-filter:blur(6px);
+}
+.ws-algo-card::before{
+  content:''; position:absolute; top:0; left:8%; right:8%; height:1px;
+  background:linear-gradient(90deg, transparent, var(--wc), transparent); opacity:.7;
+}
+.ws-algo-text{ font:300 clamp(13.5px, 1.5vw, 15.5px)/1.85 var(--sans); color:rgba(237,237,242,.85) }
+.ws-algo-q{
+  margin-top:22px; padding-top:18px; border-top:1px dashed var(--wc-line);
+  font:italic 500 clamp(16px, 2vw, 20px)/1.55 var(--serif); color:var(--wc);
+}
+/* низ мира */
+.ws-foot{ display:flex; flex-direction:column; align-items:center; gap:20px; margin-top:clamp(44px, 7vh, 76px); text-align:center }
+.ws-scan{
+  font:300 11px/1.9 var(--sans); letter-spacing:.18em; text-indent:.18em;
+  text-transform:uppercase; color:rgba(237,237,242,.35); max-width:430px;
+}
+#world-back{
+  position:absolute; top:calc(18px + var(--safe-t)); left:20px; z-index:7;
+  background:rgba(10,10,15,.6); backdrop-filter:blur(8px);
+}
 
 /* Статичное раскрытие контента (reduced motion или нет GSAP) */
 .reveal-static .overtitle,
@@ -320,7 +409,7 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   .overtitle{ letter-spacing:.3em; text-indent:.3em; gap:12px }
   .overtitle .line{ width:34px }
   #enter-btn{ padding:19px 32px }
-  #map-back{ top:calc(14px + var(--safe-t)); left:14px }
+  #map-back, #world-back{ top:calc(14px + var(--safe-t)); left:14px }
 }
 @media (max-width:640px){
   /* узлы и подписи крупнее в «сжатом» viewBox карты */
@@ -338,6 +427,10 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   #mute-btn{ width:42px; height:42px; top:calc(14px + var(--safe-t)); right:14px }
   #hint{ letter-spacing:.14em }
   .map-head{ padding-top:56px }
+  .ws-inner{ padding-left:18px; padding-right:18px }
+  .ws-label{ letter-spacing:.16em; text-indent:.16em }
+  .ws-quote-mark{ font-size:46px }
+  #world-back{ padding:11px 16px; font-size:9.5px }
 }
 
 /* ==========================================================
@@ -419,18 +512,47 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
   </section>
 
   <!--
-    ТОЧКА РАСШИРЕНИЯ · ЧАСТЬ 2
-    Вместо превью (#world-screen) появится полный мир философа:
-    портрет (SVG/CSS), идеи, цитаты, блок «А что бы он сказал про алгоритмы?».
+    ЭКРАН 2 · МИР ФИЛОСОФА (шаблон ×6) — ЧАСТЬ 2
+    Шаблон один — данные подставляет mountWorld(p, idx) из PHILOSOPHERS:
+    портрет-созвездие (генеративный SVG), имя, идея, цитата,
+    блок «А что бы он сказал про алгоритмы?», кнопки возврата.
   -->
-  <section id="world-screen" hidden aria-label="Мир философа — превью">
-    <div class="kicker w-kicker w-in">Часть 2 · Мир философа</div>
-    <h2 class="w-name w-in" id="w-name"></h2>
-    <div class="w-years w-in" id="w-years"></div>
-    <p class="w-idea w-in" id="w-idea"></p>
-    <blockquote class="w-quote w-in" id="w-quote"></blockquote>
-    <p class="w-note w-in">Здесь появится его мир: портрет, идеи и ответ на вопрос —<br>что бы он сказал про алгоритмы?</p>
-    <button id="world-back" class="ghost-btn w-in" data-hover>← К карте</button>
+  <section id="world-screen" hidden aria-label="Мир философа">
+    <div id="world-progress" aria-hidden="true"></div>
+    <button id="world-back" class="ghost-btn" data-hover>← К карте</button>
+    <div id="world-scroll">
+      <div class="ws-inner">
+        <div class="kicker ws-kicker">Мир философа · <span id="w-idx">01 / 06</span></div>
+        <div class="ws-portrait" id="w-portrait"></div>
+        <h2 class="w-name" id="w-name"></h2>
+        <div class="ws-epithet" id="w-epithet"></div>
+        <div class="w-years" id="w-years"></div>
+
+        <section class="ws-sec ws-reveal" aria-label="Главная идея">
+          <h3 class="ws-label">Главная идея</h3>
+          <p class="ws-idea-text" id="w-idea"></p>
+        </section>
+
+        <section class="ws-sec ws-quote-sec ws-reveal" aria-label="Цитата">
+          <span class="ws-quote-mark" aria-hidden="true">«</span>
+          <blockquote class="w-quote" id="w-quote"></blockquote>
+          <div class="ws-quote-src" id="w-quote-src"></div>
+        </section>
+
+        <section class="ws-sec ws-reveal" aria-label="А что бы он сказал про алгоритмы">
+          <h3 class="ws-label">А что бы он сказал про алгоритмы?</h3>
+          <div class="ws-algo-card">
+            <p class="ws-algo-text" id="w-algo"></p>
+            <p class="ws-algo-q" id="w-question"></p>
+          </div>
+        </section>
+
+        <footer class="ws-foot ws-reveal">
+          <button id="world-back2" class="ghost-btn" data-hover>← К карте</button>
+          <p class="ws-scan">Сквозной вопрос карты:<br>кто принимает твои решения — ты или алгоритм?</p>
+        </footer>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -444,7 +566,7 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 <script>
 'use strict';
 /* ============================================================
-   JS · ЧАСТЬ 0: ПРЕЛОАДЕР + ИНТРО
+   JS · ЧАСТИ 0–2
    Разделы:
      1. Конфиг и утилиты
      2. Canvas-мир: частицы, узлы, связи, звёзды, камера
@@ -452,7 +574,10 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
      4. Типографика (заголовок по буквам, печатная машинка)
      5. Звук (Web Audio, без внешних файлов)
      6. Кастомный курсор
-     7. GSAP-сцены: интро → zoom-переход → плейсхолдер
+     7. GSAP-сцены: интро → zoom-переход
+     8. Экран 1 · карта (SVG-граф) и навигация
+     9. Экран 2 · мир философа: портрет-созвездие, контент,
+        скролл-анимации (ScrollTrigger)
    ============================================================ */
 
 /* ------------------------------------------------------------
@@ -461,35 +586,70 @@ body.typing #slogan .caret{ opacity:1; animation:caret 1s steps(2) infinite }
 const TITLE  = 'Философия в эпоху алгоритмов';
 const SLOGAN = 'Алгоритм уже знает, что ты выберешь. А ты?';
 
-// Шесть философов:
-//   x, y   — узлы на canvas-интро (доли экрана 0..1)
-//   mx, my — узлы на SVG-карте (viewBox 1200×700)
-//   years / idea / quote — данные мини-карточки и превью мира
+// Шесть философов — единый источник данных сайта:
+//   x, y           — узлы на canvas-интро (доли экрана 0..1)
+//   mx, my         — узлы на SVG-карте (viewBox 1200×700)
+//   idea           — короткая идея (мини-карточка на карте)
+//   ideaFull       — развёрнутая идея (мир философа, часть 2)
+//   quote/quoteSrc — цитата и источник
+//   epithet        — подпись под портретом
+//   algo/question  — блок «А что бы он сказал про алгоритмы?»
+//                    и сквозной мини-вопрос мира
 const PHILOSOPHERS = [
-  { id:'socrates',  name:'Сократ',       color:'#E8B84B', x:0.16, y:0.32, mx:300, my:250,
-    years:'ок. 470 — 399 до н. э.',
+  {
+    id:'socrates', name:'Сократ', color:'#E8B84B', x:0.16, y:0.32, mx:300, my:250,
+    years:'ок. 470 — 399 до н. э.', epithet:'Афины · майевтика',
     idea:'Истина рождается из вопроса. Сомневайся — и думай сам.',
-    quote:'Я знаю, что ничего не знаю' },
-  { id:'descartes', name:'Декарт',       color:'#6FA8DC', x:0.50, y:0.14, mx:620, my:150,
-    years:'1596 — 1650',
+    ideaFull:'Сократ ничего не написал и не дал ни одного ответа — только вопросы. Его майевтика — «повивальное искусство» мысли: расшатать привычные уверенности собеседника, чтобы истина родилась у него самого, а не была вручена готовой.',
+    quote:'Я знаю, что ничего не знаю', quoteSrc:'Платон · «Апология Сократа»',
+    algo:'Каждую рекомендацию он превратил бы в собеседника и завалил бы вопросами: «Почему ты решил, что мне это понравится? Кто сказал, что я это люблю? А я сам это проверял?». Алгоритм, который никогда не сомневается, для него не мудр — просто болтлив. Знать, по Сократу, — значит уметь ответить, почему; лента не умеет отвечать — она умеет показывать.',
+    question:'Ты задаёшь вопросы своей ленте — или она задаёт вопросы тебе?'
+  },
+  {
+    id:'descartes', name:'Декарт', color:'#6FA8DC', x:0.50, y:0.14, mx:620, my:150,
+    years:'1596 — 1650', epithet:'Нидерланды · метод сомнения',
     idea:'Сомнение — метод: отбрось всё, кроме очевидного.',
-    quote:'Мыслю — следовательно, существую' },
-  { id:'kant',      name:'Кант',         color:'#9B7EDE', x:0.85, y:0.38, mx:950, my:300,
-    years:'1724 — 1804',
+    ideaFull:'Сомнение у Декарта — не слабость, а инструмент: отбрось всё, в чём можно усомниться, — привычки, авторитеты, показания чувств, — пока не останется единственное несомненное. Сам акт сомнения и есть мышление; из него, как из первой точки, заново выстраивается вся картина мира.',
+    quote:'Мыслю — следовательно, существую', quoteSrc:'«Рассуждение о методе»',
+    algo:'Он усомнился бы и в алгоритме — и нашёл бы в нём одно несомненное: того, кто проверяет. Пока ты способен отличить свой выбор от предложенного, ты существуешь как мыслящий. Опасна не машина — опасно перестать сомневаться и принять первые строки выдачи за истину. Правило метода простое: считать истинным лишь то, что проверил ты сам.',
+    question:'Что из увиденного сегодня ты проверил сам?'
+  },
+  {
+    id:'kant', name:'Кант', color:'#9B7EDE', x:0.85, y:0.38, mx:950, my:300,
+    years:'1724 — 1804', epithet:'Кёнигсберг · критика разума',
     idea:'Поступай так, чтобы твоё правило могло стать всеобщим законом.',
-    quote:'Имей мужество пользоваться собственным умом' },
-  { id:'nietzsche', name:'Ницше',        color:'#E5484D', x:0.72, y:0.82, mx:830, my:590,
-    years:'1844 — 1900',
+    ideaFull:'Не разум подстраивается под мир — мир подстраивается под формы разума. А в нравственности всё решает мотив: поступок свободен, только если его правило ты готов сделать всеобщим законом. Свобода — не «делай что хочешь», а «давай себе закон сам».',
+    quote:'Имей мужество пользоваться собственным умом', quoteSrc:'«Ответ на вопрос: что такое Просвещение?»',
+    algo:'Кант разделил бы тебя надвое: феномен — данные, которые собирает машина, и ноумен — ты сам, вещь-в-себе, недосягаемая ни для одного датчика. Алгоритм безупречно описывает первое и никогда не увидит второе. Его вопрос был бы жёстче любого аудита: может ли правило твоей ленты стать всеобщим законом? Если все смотрят одно и то же — никто не мыслит.',
+    question:'Твой выбор — твой закон или чужая формула?'
+  },
+  {
+    id:'nietzsche', name:'Ницше', color:'#E5484D', x:0.72, y:0.82, mx:830, my:590,
+    years:'1844 — 1900', epithet:'Сильс-Мария · воля к власти',
     idea:'Создай свои ценности — вместо того, чтобы носить чужие.',
-    quote:'Стань тем, кто ты есть' },
-  { id:'marcus',    name:'Марк Аврелий', color:'#7FB88A', x:0.14, y:0.78, mx:430, my:620,
-    years:'121 — 180',
+    ideaFull:'Ценности не выдаются — они создаются. Воля к власти — не господство над другими, а преодоление себя: собрать из хаоса собственную шкалу и жить по ней. Готовые истины он подозревал в усталости: «так принято» — чаще всего диагноз, а не аргумент.',
+    quote:'Стань тем, кто ты есть', quoteSrc:'«Весёлая наука»',
+    algo:'В ленте он увидел бы новую мораль стада: «так делают все», «это набирает лайки». Он потребовал бы разбить шкалу, по которой тебя мерят, — рейтинги, охваты, скоринги, — как разбивали старые скрижали. Одинаковые рекомендации — не судьба, а стыд: машине выгодно, чтобы все были удобными. Твоя задача — перегрузить формулу собой.',
+    question:'Твои ценности — твои или выданы лентой?'
+  },
+  {
+    id:'marcus', name:'Марк Аврелий', color:'#7FB88A', x:0.14, y:0.78, mx:430, my:620,
+    years:'121 — 180', epithet:'Рим · стоицизм',
     idea:'Властвуй над тем, что в твоей власти: над своими суждениями.',
-    quote:'Счастье твоей жизни зависит от качества твоих мыслей' },
-  { id:'sartre',    name:'Сартр',        color:'#D9885F', x:0.42, y:0.62, mx:640, my:380,
-    years:'1905 — 1980',
+    ideaFull:'Император писал «к самому себе» на военных стоянках: ранит не событие, а суждение о нём. Властвовать имеет смысл только над тем, что тебе подвластно, — над своим суждением, желанием, действием. Всё остальное — чужой ход в общей игре.',
+    quote:'Счастье твоей жизни зависит от качества твоих мыслей', quoteSrc:'«Размышления»',
+    algo:'На ленту он смотрел бы, как на войско: смотри, но не подчиняйся. Возмущение в фиде — не твоё возмущение, пока ты сам не вынес суждение. Стоик отличает сигнал от шума: гнев — от новости, желание — от рекламы. Его утренняя практика звучала бы вполне современно: «сегодня тебя снова будут давить на слабые места — и всё же решение остаётся внутри», там, куда не дотянуться никакому алгоритму.',
+    question:'Что сейчас в твоей власти — а что владеет тобой?'
+  },
+  {
+    id:'sartre', name:'Сартр', color:'#D9885F', x:0.42, y:0.62, mx:640, my:380,
+    years:'1905 — 1980', epithet:'Париж · экзистенциализм',
     idea:'Ты — сумма твоих выборов. Отменить ответственность нельзя.',
-    quote:'Человек осуждён быть свободным' },
+    ideaFull:'Существование предшествует сущности: сначала ты есть — потом определяешь себя выборами. Заранее написанного сценария нет, а значит, нет и оправданий. Свобода — приговор, на который нельзя подать апелляцию.',
+    quote:'Человек осуждён быть свободным', quoteSrc:'«Экзистенциализм — это гуманизм»',
+    algo:'Доверие алгоритму он назвал бы дурной верой: попыткой спрятаться от свободы, отдав выбор машине. «Алгоритм так показал» — не оправдание: клик всё равно твой. Даже отказываясь выбирать, ты выбираешь — отказ. Ответственность не отменяется, а лишь переименовывается в «ленту». Свобода давит — потому её так охотно отдают. Но осуждён быть свободным — именно ты.',
+    question:'«Алгоритм так показал» — это выбор или отговорка?'
+  },
 ];
 // Линии-связи между узлами (индексы PHILOSOPHERS) — «созвездие»
 const EDGES = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[1,5],[2,5],[0,4]];
@@ -497,7 +657,8 @@ const EDGES = [[0,1],[1,2],[2,3],[3,4],[4,5],[5,0],[1,5],[2,5],[0,4]];
 const REDUCED      = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const FINE_POINTER = window.matchMedia('(pointer: fine)').matches;
 const HAS_GSAP     = typeof window.gsap !== 'undefined';
-if (HAS_GSAP && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger); // пригодится в части 1
+const HAS_ST       = HAS_GSAP && typeof window.ScrollTrigger !== 'undefined';
+if (HAS_ST) gsap.registerPlugin(ScrollTrigger);   // скролл-анимации миров (часть 2)
 
 const TAU  = Math.PI * 2;
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -1173,6 +1334,7 @@ function setAmbient(edge, node, z, dur){
 
 /* --- Показ карты (first = с отрисовкой рёбер) --- */
 function showMap(first){
+  killWorldST();                                   // триггеры мира больше не нужны
   worldScreen.hidden = true; worldScreen.style.opacity = '';
   mapScreen.hidden = false;
   introActive = false;
@@ -1220,54 +1382,262 @@ function flyToWorld(p, g){
         { opacity: 0, y: -16, duration: .4, stagger: .04, ease: 'power2.in' })
       .to(mapSvg, { scale: 9, transformOrigin: `${ox}px ${oy}px`, duration: 1.5, ease: 'power3.in' }, .1)
       .to(flash, { opacity: 1, duration: .5, ease: 'power2.in' }, 1.15)
-      .add(() => showWorld(p));
+      .add(() => showWorld(p, +g.dataset.i));
   } else {
     flash.style.transition = 'opacity .45s linear';
     flash.style.opacity = 1;
-    setTimeout(() => showWorld(p), 480);
+    setTimeout(() => showWorld(p, +g.dataset.i), 480);
   }
 }
 
-/* --- Превью мира философа (часть 2 заменит полным экраном) --- */
-function showWorld(p){
-  worldScreen.style.setProperty('--wc', p.color);
-  worldScreen.style.background =
-    `radial-gradient(1000px 640px at 50% 40%, ${hexToRgba(p.color, .16)}, transparent 70%), #0a0a0f`;
-  document.getElementById('w-name').textContent  = p.name;
-  document.getElementById('w-years').textContent = p.years;
-  document.getElementById('w-idea').textContent  = p.idea;
-  document.getElementById('w-quote').textContent = '«' + p.quote + '»';
+/* ============================================================
+   9. ЭКРАН 2 · МИР ФИЛОСОФА (шаблон ×6) — ЧАСТЬ 2
+   Контент миров лежит в PHILOSOPHERS (ideaFull / algo / question…).
+   Портрет — генеративный SVG: «созвездие-профиль» в цвете философа
+   + личный знак (вопрос Сократа, оси Декарта, звезда Канта,
+   молния Ницше, лавр Марка Аврелия, глаз Сартра).
+   Секции мира проявляются по скроллу (ScrollTrigger слушает
+   внутренний контейнер #world-scroll).
+   ============================================================ */
+const worldScroller = document.getElementById('world-scroll');
+const worldProgress = document.getElementById('world-progress');
+const wPortraitEl   = document.getElementById('w-portrait');
+const wNameEl       = document.getElementById('w-name');
+const wEpithetEl    = document.getElementById('w-epithet');
+const wYearsEl      = document.getElementById('w-years');
+const wIdeaEl       = document.getElementById('w-idea');
+const wQuoteEl      = document.getElementById('w-quote');
+const wQuoteSrcEl   = document.getElementById('w-quote-src');
+const wAlgoEl       = document.getElementById('w-algo');
+const wQuestionEl   = document.getElementById('w-question');
+const wIdxEl        = document.getElementById('w-idx');
+let   worldSTs = [];          // ScrollTrigger'ы мира (убиваются при выходе)
+let   worldIdx = 0;           // индекс философа, чей мир открыт
+
+// Имя по словам/буквам (как заголовок интро) — для анимации входа
+function splitChars(text){
+  return text.split(' ').map(w =>
+    `<span class="word">${[...w].map(c => `<span class="ch">${c}</span>`).join('')}</span>`
+  ).join(' ');
+}
+// Детерминированный ГПСЧ — звёзды портрета не «прыгают» между визитами
+function seeded(seed){
+  let s = (seed >>> 0) || 1;
+  return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+}
+
+/* --- Геометрия «созвездия-профиля» (viewBox 150×180) --- */
+const BUST = {
+  cx: 75, cy: 95,
+  front: [[83,22],[63,30],[53,44],[51,52],[47,58],[39,68],[47,74],[46,81],[51,92],[63,104],[60,118],[41,144],[25,160]], // лицо
+  back:  [[83,22],[95,44],[99,76],[95,114],[113,158]],  // затылок/плечо
+  eye: [60,55], ear: [79,76], cheek: [63,88],
+  big:  [0, 5, 8, 18],       // крупные точки: макушка, нос, подбородок, глаз
+};
+
+/* --- Личные знаки философов (рисуются за портретом, stroke из группы) --- */
+const PORTRAIT_GLYPHS = {
+  // Сократ — большой вопрос
+  socrates: c => `<text x="75" y="130" text-anchor="middle" font-family="Cormorant, Georgia, serif" font-style="italic" font-size="116" fill="${c}" stroke="none">?</text>`,
+  // Декарт — оси координат и кривая
+  descartes: c => `
+    <line x1="14" y1="95" x2="136" y2="95"/>
+    <line x1="75" y1="12" x2="75" y2="176"/>
+    <path d="M26 144 C 52 42 94 150 126 56" stroke-dasharray="3 6"/>
+    <circle cx="93" cy="97" r="3" fill="${c}" stroke="none"/>`,
+  // Кант — звезда («звёздное небо над головой…»)
+  kant: c => `
+    <path d="M75 33 L82 88 L137 95 L82 102 L75 157 L68 102 L13 95 L68 88 Z"/>
+    <circle cx="75" cy="95" r="30"/>`,
+  // Ницше — молния и «разбитый» круг
+  nietzsche: c => `
+    <path d="M92 14 L60 82 L82 86 L56 168 L102 78 L80 74 Z"/>
+    <circle cx="75" cy="92" r="60" stroke-dasharray="80 26"/>`,
+  // Марк Аврелий — лавровый венок (генерируется ветвями-листьями)
+  marcus: c => laurelSVG(),
+  // Сартр — всевидящее око (взгляд Другого)
+  sartre: c => `
+    <path d="M20 95 Q 75 50 130 95 Q 75 140 20 95 Z"/>
+    <circle cx="75" cy="95" r="16"/>
+    <circle cx="75" cy="95" r="5" fill="${c}" stroke="none"/>`,
+};
+// ветви лавра: листья по дуге — без единой картинки
+function laurelSVG(){
+  const cx = 75, cy = 95, R = 55;
+  let s = '';
+  const branch = (a0, a1) => {
+    for (let i = 0; i <= 6; i++){
+      const t  = (a0 + (a1 - a0) * i / 6) * Math.PI / 180;
+      const x  = cx + R * Math.cos(t), y = cy + R * Math.sin(t);
+      const nx = Math.cos(t), ny = Math.sin(t);   // наружу от центра
+      const tx = -ny, ty = nx;                    // вдоль ветви
+      const L  = 11 - i;
+      s += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + tx * L * .95).toFixed(1)}" y2="${(y + ty * L * .95).toFixed(1)}"/>`;
+      s += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + nx * L * .55 + tx * L * .35).toFixed(1)}" y2="${(y + ny * L * .55 + ty * L * .35).toFixed(1)}"/>`;
+    }
+  };
+  branch(146, 214); branch(34, -34);
+  return s;
+}
+
+/* --- Генератор портрета-созвездия --- */
+function buildPortraitSVG(p, idx){
+  const col = p.color;
+  const line = hexToRgba(col, .5);
+  const rnd = seeded(idx * 7919 + 17);
+  // звёзды внутри круга портрета
+  let starDots = '';
+  for (let i = 0; i < 12; i++){
+    const a = rnd() * TAU, r = 16 + rnd() * 46;
+    starDots += `<circle cx="${(BUST.cx + Math.cos(a) * r).toFixed(1)}" cy="${(BUST.cy + Math.sin(a) * r * .92).toFixed(1)}" r="${(0.7 + rnd() * 0.9).toFixed(2)}" fill="${col}" opacity="${(0.18 + rnd() * .3).toFixed(2)}"/>`;
+  }
+  // точки профиля: ключевые — цветные и крупнее
+  const allPts = [...BUST.front, ...BUST.back, BUST.eye, BUST.ear, BUST.cheek];
+  const dotsSvg = allPts.map((q, i) =>
+    `<circle cx="${q[0]}" cy="${q[1]}" r="${BUST.big.includes(i) ? 2.3 : 1.5}" fill="${BUST.big.includes(i) ? col : '#EDEDF2'}" opacity="${BUST.big.includes(i) ? .95 : .7}"/>`
+  ).join('');
+  // внутренние линии «лица»: бровь–глаз, глаз–нос, ухо–затылок,
+  // ухо–скула, скула–челюсть, линия шеи
+  const inner = [
+    [51,52,60,55],[60,55,47,58],[79,76,99,76],[79,76,63,88],[63,88,63,104],[95,114,60,118],
+  ].map(l => `<line x1="${l[0]}" y1="${l[1]}" x2="${l[2]}" y2="${l[3]}" stroke="${line}" stroke-width="1"/>`).join('');
+  const poly = pts => `<polyline points="${pts.map(q => q.join(',')).join(' ')}" fill="none" stroke="${line}" stroke-width="1"/>`;
+  const glyph = PORTRAIT_GLYPHS[p.id] ? PORTRAIT_GLYPHS[p.id](col) : '';
+  return `
+<svg viewBox="0 0 150 180" role="img" aria-label="Портрет-созвездие: ${p.name}">
+  <defs>
+    <radialGradient id="pw-${idx}">
+      <stop offset="0" stop-color="${col}" stop-opacity=".26"/>
+      <stop offset=".65" stop-color="${col}" stop-opacity=".08"/>
+      <stop offset="1" stop-color="${col}" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="${BUST.cx}" cy="${BUST.cy}" r="72" fill="url(#pw-${idx})"/>
+  <g stroke="${col}" fill="none" stroke-width="1.3" stroke-linecap="round" opacity=".15">${glyph}</g>
+  ${starDots}
+  ${poly(BUST.front)}
+  ${poly(BUST.back)}
+  ${inner}
+  ${dotsSvg}
+  <circle cx="${BUST.cx}" cy="${BUST.cy}" r="66" fill="none" stroke="${hexToRgba(col, .35)}" stroke-width="1"/>
+  <circle cx="${BUST.cx}" cy="${BUST.cy}" r="74" fill="none" stroke="${hexToRgba(col, .18)}" stroke-width="1" stroke-dasharray="2 7"/>
+  <g class="ws-orbit">
+    <circle cx="${BUST.cx}" cy="${BUST.cy - 74}" r="5.5" fill="${col}" opacity=".22"/>
+    <circle cx="${BUST.cx}" cy="${BUST.cy - 74}" r="2.3" fill="${col}"/>
+  </g>
+</svg>`;
+}
+
+/* --- Наполнение шаблона мира данными философа --- */
+function mountWorld(p, idx){
+  worldIdx = idx;
+  const ws = worldScreen.style;
+  ws.setProperty('--wc', p.color);
+  ws.setProperty('--wc-line', hexToRgba(p.color, .30));
+  ws.setProperty('--wc-bg',  hexToRgba(p.color, .10));
+  ws.background = `radial-gradient(1100px 720px at 50% 32%, ${hexToRgba(p.color, .15)}, transparent 68%), #0a0a0f`;
+  worldScreen.setAttribute('aria-label', `Мир философа: ${p.name}`);
+
+  wIdxEl.textContent      = `${String(idx + 1).padStart(2, '0')} / ${String(PHILOSOPHERS.length).padStart(2, '0')}`;
+  wEpithetEl.textContent  = p.epithet;
+  wYearsEl.textContent    = p.years;
+  wIdeaEl.textContent     = p.ideaFull;
+  wQuoteEl.textContent    = '«' + p.quote + '»';
+  wQuoteSrcEl.textContent = p.quoteSrc;
+  wAlgoEl.textContent     = p.algo;
+  wQuestionEl.textContent = p.question;
+  wNameEl.setAttribute('aria-label', p.name);
+  wNameEl.innerHTML = `<span aria-hidden="true">${splitChars(p.name)}</span>`;
+  wPortraitEl.innerHTML = buildPortraitSVG(p, idx);
+
+  worldScroller.scrollTop = 0;      // каждый мир начинается с начала
+  updateWorldProgress();
+}
+
+/* --- Линия чтения: сколько мира уже пройдено --- */
+function updateWorldProgress(){
+  const max = worldScroller.scrollHeight - worldScroller.clientHeight;
+  const k = max > 4 ? Math.min(1, worldScroller.scrollTop / max) : 0;
+  worldProgress.style.transform = `scaleX(${k})`;
+}
+worldScroller.addEventListener('scroll', updateWorldProgress, { passive: true });
+
+function killWorldST(){
+  worldSTs.forEach(t => t.kill());
+  worldSTs = [];
+}
+
+/* --- Показ мира: шапка анимируется, секции — по скроллу --- */
+function showWorld(p, idx){
   mapScreen.hidden = true;
   if (HAS_GSAP) gsap.set(mapSvg, { clearProps: 'transform' });   // сброс влёта под покровом вспышки
+  mountWorld(p, idx);
   worldScreen.hidden = false;
+  worldScroller.scrollTop = 0;      // сброс на видимом контейнере: при display:none присваивание игнорируется
+  updateWorldProgress();
   setAmbient(0.12, 0.16, 1.05, 1.6);
   entering = false;
+
   if (HAS_GSAP && !REDUCED){
     gsap.fromTo(worldScreen, { opacity: 0 }, { opacity: 1, duration: .6, ease: 'power2.out' });
-    gsap.fromTo('#world-screen .w-in',
-      { y: 26, opacity: 0 },
-      { y: 0, opacity: 1, duration: .9, stagger: .09, ease: 'power3.out', delay: .1 });
     gsap.to(flash, { opacity: 0, duration: 1.1, delay: .25, ease: 'power2.out' });
+
+    // шапка: портрет → надзаголовок → имя по буквам → эпитет и годы
+    gsap.timeline({ delay: .12 })
+      .fromTo('#w-portrait', { scale: .84, opacity: 0 }, { scale: 1, opacity: 1, duration: 1.1, ease: 'power3.out' })
+      .fromTo('.ws-kicker', { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: .6, ease: 'power2.out' }, .08)
+      .fromTo('#w-name .ch', { y: 26, opacity: 0, filter: 'blur(8px)' },
+        { y: 0, opacity: 1, filter: 'blur(0px)', duration: .8, stagger: .026, ease: 'power3.out' }, .16)
+      .fromTo(['#w-epithet', '#w-years'], { opacity: 0, y: 10 },
+        { opacity: 1, y: 0, duration: .7, stagger: .1, ease: 'power2.out' }, .5);
+
+    // секции мира: видимые — въезжают сразу, дальние — по скроллу
+    requestAnimationFrame(() => {
+      killWorldST();
+      const scR = worldScroller.getBoundingClientRect();
+      document.querySelectorAll('#world-screen .ws-reveal').forEach(el => {
+        const reveal = d => gsap.fromTo(el, { opacity: 0, y: 36 },
+          { opacity: 1, y: 0, duration: .9, ease: 'power3.out', delay: d });
+        const inView = el.getBoundingClientRect().top - scR.top < scR.height * .92;
+        if (inView || !HAS_ST){
+          reveal(.45);                                // уже в кадре — показать после шапки
+        } else if (HAS_ST){
+          worldSTs.push(ScrollTrigger.create({
+            trigger: el, scroller: worldScroller, start: 'top 90%', once: true,
+            onEnter: () => reveal(0)
+          }));
+        }
+      });
+      if (HAS_ST) ScrollTrigger.refresh();
+    });
+
+    setTimeout(() => document.getElementById('world-back').focus({ preventScroll: true }), 1000);
   } else {
     flash.style.opacity = 0;
   }
 }
 
-/* --- Назад: мир → карта --- */
+/* --- Назад: мир → карта (возвращает фокус на узел философа) --- */
 function backToMap(){
   if (entering || worldScreen.hidden) return;
   entering = true;
   Sound.blip();
+  killWorldST();
   setAmbient(0.3, 0.35, 1.15, 1.6);
   if (HAS_GSAP && !REDUCED){
     gsap.to(worldScreen, {
       opacity: 0, duration: .45, ease: 'power2.in',
-      onComplete: () => { worldScreen.hidden = true; worldScreen.style.opacity = ''; showMap(false); }
+      onComplete: () => { worldScreen.hidden = true; worldScreen.style.opacity = ''; showMap(false); focusMapNode(); }
     });
   } else {
     worldScreen.hidden = true;
     showMap(false);
+    focusMapNode();
   }
+}
+function focusMapNode(){
+  const g = mapSvg.querySelector(`.map-node[data-i="${worldIdx}"]`);
+  if (g) g.focus({ preventScroll: true });
 }
 
 /* --- Назад: карта → интро --- */
@@ -1320,6 +1690,7 @@ mapSvg.addEventListener('keydown', e => {
   flyToWorld(PHILOSOPHERS[+g.dataset.i], g);
 });
 document.getElementById('world-back').addEventListener('click', backToMap);
+document.getElementById('world-back2').addEventListener('click', backToMap);
 document.getElementById('map-back').addEventListener('click', mapToIntro);
 window.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
@@ -1345,14 +1716,13 @@ requestAnimationFrame(loop);
 requestAnimationFrame(tickPre);
 
 /* ------------------------------------------------------------
-   ТОЧКИ РАСШИРЕНИЯ · ЧАСТИ 2–4
-   Часть 2 (миры): #world-screen заменяется полным миром философа
-     (портрет SVG/CSS, идеи, цитаты, блок «А что бы он сказал
-     про алгоритмы?»); точка входа — showWorld(p)/flyToWorld(p, g).
-   Часть 3 (тест): 8 вопросов, прогресс-бар, «анализ», результат.
+   ТОЧКИ РАСШИРЕНИЯ · ЧАСТИ 3–4
+   Часть 3 (тест): 8 вопросов по одному на экран, прогресс-бар,
+     анимация «анализа», результат-философ. Точка входа — футер
+     мира (.ws-foot): добавить кнопку «Пройти тест» → showQuiz().
    Часть 4 (финал): «Алгоритм предлагает. Выбираешь — ты».
-   Скролл-анимации: ScrollTrigger уже зарегистрирован;
-     Lenis подключается строкой в <head> (см. комментарий там).
+   Скролл внутри миров — нативный (#world-scroll); ScrollTrigger
+     уже слушает его (пример — reveal .ws-reveal в showWorld).
    ------------------------------------------------------------ */
 </script>
 </body>
